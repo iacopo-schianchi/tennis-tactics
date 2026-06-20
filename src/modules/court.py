@@ -13,16 +13,16 @@ POINT_TOLERANCE_PX = 10 # tolerance for line intersection
 GROUP_THRESH_PX = 15 # distance threshold for merging points
 
 class CourtDetector:
-    def process(self, frame, frame_id):
-        if frame_id != 0 and court is not None: return {}
+    def process(self, frame, frame_id, context):
+        if frame_id != 0 and context.get("court_points") is not None: return {}
 
-        court = self.detect_lines(frame)
+        court = self.detect_court(frame)
         return {"court_points": court}
 
     def detect_court(self, frame):
         mask = cv2.inRange(frame, LOWER, UPPER)
         
-        # filter noise
+        # filter background noise
         num_labels, labels, stats, _centroids = cv2.connectedComponentsWithStats(mask)
         clean_mask = np.zeros_like(mask)
         for i in range(1, num_labels):
@@ -56,6 +56,9 @@ class CourtDetector:
                 point = self.find_segment_intersection(lines[i], lines[j])
                 if point is not None:
                     points.append(point)
+
+        if len(points) < 4:
+            return None
 
         # merge close points
         merged_points = []
@@ -145,8 +148,11 @@ class CourtDetector:
         if len(points) < 4:
             return None
     
-        hull = ConvexHull(points)
-        hull_points = [tuple(points[i]) for i in hull.vertices]
+        try:
+            hull = ConvexHull(points)
+            hull_points = [tuple(points[i]) for i in hull.vertices]
+        except Exception as e:
+            return None
 
         if len(hull_points) < 4:
             hull_points = points
@@ -167,7 +173,7 @@ class CourtDetector:
         center_y = sum(p[1] for p in quad) / 4
         sorted_pts = sorted(quad, key=lambda p: np.arctan2(p[1] - center_y, p[0] - center_x))
 
-        # shoelance formula
+        # shoelace formula
         x1 = sorted_pts[0][0]
         y1 = sorted_pts[0][1]
         x2 = sorted_pts[1][0]

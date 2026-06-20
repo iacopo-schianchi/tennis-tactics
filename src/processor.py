@@ -34,6 +34,6 @@ class VideoProcessor:
         frame_data = {}
 
         for module in self.modules:
-            frame_data.update(module.process(frame, frame_id))
+            frame_data.update(module.process(frame, frame_id, self.orchestrator.context))
         
         return frame_data
