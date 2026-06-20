@@ -1,5 +1,5 @@
-from src.models import PointContext, Shot
-from src.physics import TrajectoryProcessor
+from models import PointContext, Shot
+from physics import Trajectory
 
 WAITING = 0
 IN_POINT = 1
@@ -9,7 +9,7 @@ class MatchOrchestrator:
     def __init__(self):
         self.state = WAITING
         self.context = None
-        self.physics = TrajectoryProcessor()
+        self.physics = Trajectory()
     
     def process_frame(self, frame_data):
         if self.state == WAITING:
@@ -49,7 +49,11 @@ class MatchOrchestrator:
         bounce = self.physics.detect_bounce()
         if bounce != None:
             self._process_bounce(bounce)
-        
+
+    def detect_serve(self, data):
+        # TODO: update to detect hit in general, then classify as serve or rally shot
+        pass
+
     def _process_bounce(self, bounce_coords):
         # TODO: Implement bounce processing logic (in/out-of-court, map to BEV, check for double bounce)
         pass

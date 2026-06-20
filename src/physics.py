@@ -11,7 +11,7 @@ class Trajectory:
         if len(self.buffer) < 3:
             return None
         
-        # TODO: improve from basic midpoint
+        # TODO: improve from basic midpoint (e.g., ML model by y and maybe x positions)
         _x1, y1 = self.buffer[-3]
         x2, y2 = self.buffer[-2]
         _x3, y3 = self.buffer[-1]

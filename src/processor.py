@@ -1,9 +1,12 @@
 import cv2
+from modules.court import CourtDetector
 from orchestrator import MatchOrchestrator
 
 class VideoProcessor:
     def __init__(self):
-        self.modules = []
+        self.modules = [
+            CourtDetector(),
+        ]
         self.orchestrator = MatchOrchestrator()
     
     def process(self, video_path):
@@ -17,7 +20,7 @@ class VideoProcessor:
             if not ret:
                 break
             
-            frame_data = self._run_perception(frame)
+            frame_data = self._run_perception(frame, frame_id)
             self.orchestrator.process_frame(frame_data)
 
             if frame_id % 100 == 0:
@@ -27,10 +30,10 @@ class VideoProcessor:
         
         cap.release()
 
-    def _run_perception(self, frame):
+    def _run_perception(self, frame, frame_id):
         frame_data = {}
 
         for module in self.modules:
-            frame_data.update(module.process(frame))
+            frame_data.update(module.process(frame, frame_id))
         
         return frame_data
