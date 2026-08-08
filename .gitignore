@@ -1,0 +1,9 @@
+/assets
+/data
+.venv
+
+src/models/*.pth
+src/models/*.pt
+src/models/*.keras
+src/models/*.pkl
+src/models/**/*.pt

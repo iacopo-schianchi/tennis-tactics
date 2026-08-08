@@ -1,10 +1,12 @@
 from models import PointContext, Shot
 from physics import Trajectory
+from warnings import deprecated
 
 WAITING = 0
 IN_POINT = 1
 SAVING = 2
 
+@deprecated("No longer processing in a single pass")
 class MatchOrchestrator:
     def __init__(self):
         self.state = WAITING

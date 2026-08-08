@@ -1,39 +1,70 @@
 import cv2
-from modules.court import CourtDetector
-from orchestrator import MatchOrchestrator
+from modules.court.detector import CourtDetector
+from modules.player.detector import PlayerDetector
+from modules.ball.detector import BallDetector
+from modules.events.detector import EventDetector
+from modules.metrics.estimator import ShotMetricEstimator
+
+FRAME_QUEUE_SIZE = 3
 
 class VideoProcessor:
-    def __init__(self):
-        self.modules = [
-            CourtDetector(),
+    def __init__(self, fps):
+        self.context = []
+        self.fps = 30
+
+        # each pass processes frames -> updates context
+        self.passes = [
+            (
+                CourtDetector(),
+                PlayerDetector(),
+                BallDetector(self, fps),
+            ),
+            (
+                EventDetector()
+            ),
+            (
+                # shot classification & peak/speed estimation
+                ShotMetricEstimator(self)
+            ),
         ]
-        self.orchestrator = MatchOrchestrator()
     
     def process(self, video_path):
         cap = cv2.VideoCapture(video_path)
+        
+        self.total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
-        total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-        frame_id = 0
+        for i, modules in enumerate(self.passes):
+            frames = []
+            frame_id = 0
 
-        while cap.isOpened():
-            ret, frame = cap.read()
-            if not ret:
-                break
-            
-            frame_data = self._run_perception(frame, frame_id)
-            self.orchestrator.process_frame(frame_data)
+            while cap.isOpened():
+                ret, frame = cap.read()
+                if not ret:
+                    break
+                frames.append(frame)
+                if len(frames) > FRAME_QUEUE_SIZE:
+                    frames.pop(0)
+                
+                frame_data = self._run_perception(frames, frame_id, modules)
+                if i == 0:
+                    self.context.append(frame_data)
+                else:
+                    self.context[frame_id].update(frame_data)
 
-            if frame_id % 100 == 0:
-                print(f"Processed {frame_id}/{total_frames} frames")
-            
-            frame_id += 1
+                if frame_id % 100 == 0:
+                    print(f"Pass {i} | Processed {frame_id}/{self.total_frames} frames")
+                
+                frame_id += 1
         
         cap.release()
 
-    def _run_perception(self, frame, frame_id):
+    def _run_perception(self, frames, frame_id, modules):
         frame_data = {}
 
-        for module in self.modules:
-            frame_data.update(module.process(frame, frame_id, self.orchestrator.context))
+        for module in modules:
+            frame_data.update(module.process(frames, frame_id, self.context))
         
         return frame_data
+    
+    def set_context(self, frame_id, context):
+        if self.get(frame_id): self.context[frame_id] = context
