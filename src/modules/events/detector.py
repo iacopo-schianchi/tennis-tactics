@@ -66,6 +66,8 @@ class EventDetector:
         avg_probs = prob_sum / overlap_count[:, None]
         predicted_status = np.argmax(avg_probs, axis=1)
 
+        accepted_hits = self._filter_events(predicted_status, avg_probs, 1)
+        accepted_bounces = self._filter_events(predicted_status, avg_probs, 2)
         # TODO: keep only peak for continuous hit/bounce events (max prob)
 
         self.predictions_cache = []
@@ -73,8 +75,32 @@ class EventDetector:
             self.predictions_cache.append({
                 "status": int(predicted_status[frame]), # 0=none, 1=hit, 2=bounce
                 "no_event_prob": float(avg_probs[frame][0]),
+
                 "hit_prob": float(avg_probs[frame][1]),
-                "is_hit": predicted_status[frame] == 1,
+                "is_hit": accepted_hits[frame],
+
                 "bounce_prob": float(avg_probs[frame][2]),
-                "is_bounce": predicted_status[frame] == 2
+                "is_bounce": accepted_bounces[frame]
             })
+
+    # keep only highest probability event in contiguous frames
+    def _filter_events(self, predicted_status, avg_probs, target_class):
+        n = len(predicted_status)
+        accepted = np.zeros(n, dtype=bool)
+
+        i = 0
+        while i < n:
+            if predicted_status[i] != target_class:
+                i += 1
+                continue
+
+            # contiguous event segments
+            j = i
+            while j + 1 < n and predicted_status[j + 1] == target_class:
+                j += 1
+
+            best_idx = i + np.argmax(avg_probs[i : j + 1, target_class])
+            accepted[best_idx] = True
+            i = j + 1
+
+        return accepted
