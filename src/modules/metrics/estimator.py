@@ -32,7 +32,7 @@ class ShotMetricEstimator:
 
         frame_event = context[frame_id]['events']
         if frame_event['is_hit']:
-            shot_type, stroke_height = self.estimate_shot_type(frame_id, context)
+            shot_type, stroke_height = self._estimate_shot_type(frame_id, context)
             self.update_last_event(frame_id, context, stroke_height)
         elif frame_event['is_bounce']:
             self.update_last_event(frame_id, context, 0)
@@ -46,7 +46,7 @@ class ShotMetricEstimator:
         }
         
 
-    def estimate_shot_type(self, frame_id, context):
+    def _estimate_shot_type(self, frame_id, context):
         players = context[frame_id]['players']
         # TODO: get player coords from surrounding frames if missing
 
@@ -70,8 +70,8 @@ class ShotMetricEstimator:
         if bx is None or by is None:
             return None
 
-        nearest_player, is_far = self.get_nearest_player(players, bx, by)
-        last_event, _ = self.get_last_event(frame_id, context)
+        nearest_player, is_far = self._get_nearest_player(players, bx, by)
+        last_event, _ = self._get_last_event(frame_id, context)
 
         x1, y1, x2, _ = nearest_player
 
@@ -105,7 +105,7 @@ class ShotMetricEstimator:
 
         return shot_type, stroke_height
     
-    def get_last_event(self, frame_id, context):
+    def _get_last_event(self, frame_id, context):
         if frame_id == 0: return None
 
         i = frame_id - 1
@@ -115,7 +115,7 @@ class ShotMetricEstimator:
             elif event['is_bounce']: return 'bounce', i
             i -= 1
 
-    def get_nearest_player(self, player_boxes, bx, by):
+    def _get_nearest_player(self, player_boxes, bx, by):
         def center(box):
             x1, y1, x2, y2 = box
             return ((x1 + x2) / 2, (y1 + y2) / 2)
@@ -128,23 +128,23 @@ class ShotMetricEstimator:
             )
         )
 
-    def update_last_metrics(self, frame_id, context, h1):
-        event_type, i = self.get_last_event(frame_id, context)
+    def _update_last_metrics(self, frame_id, context, h1):
+        event_type, i = self._get_last_event(frame_id, context)
         last_event = context[i]
         frame_separation = frame_id - i
         h0 = 0 if event_type == 'bounce' else STROKE_HEIGHTS[last_event['shot_type']]
 
         T = frame_separation / self.processor.fps
 
-        peak = self.estimate_peak(T, h0, h1)
-        speed = self.estimate_speed() # TODO
+        peak = self._estimate_peak(T, h0, h1)
+        speed = self._estimate_speed() # TODO
 
         self.processor.set_context(i, {**context[i], 'peak': peak, 'speed': speed})
 
-    def estimate_peak(self, T, h0, h1):
+    def _estimate_peak(self, T, h0, h1):
         v_y0 = (h1 - h0 + 0.5 * g * T ** 2) / T
         t_up = v_y0 / g
         return h0 + 0.5 * g * t_up ** 2
 
-    def estimate_speed(self, frame_id, context):
+    def _estimate_speed(self):
         pass

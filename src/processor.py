@@ -6,15 +6,20 @@ from modules.events.detector import EventDetector
 from modules.metrics.estimator import ShotMetricEstimator
 
 class VideoProcessor:
-    def __init__(self, fps):
+    def __init__(self, far_player_id, near_player_id, fps = 30):
         self.context = []
-        self.fps = 30
+        self.fps = fps
+
+        self.player_map = {
+            'near': near_player_id,
+            'far': far_player_id
+        }
 
         # each pass processes frames -> updates context
         self.passes = [
             (
                 CourtDetector(),
-                PlayerDetector(),
+                PlayerDetector(self.player_map),
                 BallDetector(self, fps),
             ),
             (
@@ -38,6 +43,8 @@ class VideoProcessor:
             window_size = max(
                 module.window_size if hasattr(module, "window_size") else 1 for module in modules
             )
+
+            # TODO: only read frames for passes that need it
 
             while cap.isOpened():
                 ret, frame = cap.read()

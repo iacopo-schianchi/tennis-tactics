@@ -21,25 +21,10 @@ class BallDetector:
     def wrap_angle(self, a):
         return ((a + np.pi) % (2 * np.pi)) - np.pi
 
-    def image_to_court(self, x, y, court_points):
-        if x is None or y is None or court_points is None:
+    def image_to_court(self, x, y, H):
+        if x is None or y is None or H is None:
             return None, None
 
-        tl, tr, br, bl = np.asarray(court_points, dtype=np.float32)
-
-        src_pts = np.array([tl, tr, br, bl], dtype=np.float32)
-
-        dst = np.array(
-            [
-                [0,0],
-                [self.COURT_WIDTH,0],
-                [self.COURT_WIDTH,self.COURT_HEIGHT],
-                [0,self.COURT_HEIGHT]
-            ],
-            dtype=np.float32
-        )
-
-        H, _ = cv2.findHomography(src_pts, dst)
         pt = np.array([[x, y]], dtype=np.float32)
 
         court_pt = cv2.perspectiveTransform(pt, H)[0, 0]
@@ -81,8 +66,8 @@ class BallDetector:
 
         x, y = None, None
         if x_px is not None and y_px is not None:
-            court_points = context[frame_id].get("court_points")
-            x, y = self.image_to_court(x_px, y_px, court_points)
+            H = context[frame_id].get("court").get('H')
+            x, y = self.image_to_court(x_px, y_px, H)
 
         vx, vy = 0, 0
         if frame_id > 2:
@@ -114,6 +99,8 @@ class BallDetector:
                 'is_missing': x is None or y is None,
                 'x': x,
                 'y': y,
+                'x_px': x_px,
+                'y_px': y_px,
                 'vx': vx,
                 'vy': vy,
                 'angle': angle,

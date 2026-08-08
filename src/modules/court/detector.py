@@ -4,6 +4,7 @@ import numpy as np
 from .sam_loader import load_sam_model, run_sam_segmentation
 from .geometry import get_convex_hull_mask
 from .line_detection import get_corners, get_lines, split_by_orientation, get_corners
+from ...consts.consts import COURT_LENGTH, COURT_WIDTH
 
 LOWER = np.array([110] * 3)
 UPPER = np.array([255] * 3)
@@ -12,12 +13,12 @@ predictor = load_sam_model()
 
 class CourtDetector:
     def process(self, frames, frame_id, context):
-        if frame_id == 0: court = self.detect_court(frames[0])
+        if frame_id == 0: pts, H = self.detect_court(frames[0])
         else:
-            last_court = context[frame_id - 1].get("court_points")
-            court = last_court if last_court is not None else self.detect_court(frames[-1])
+            last_court = context[frame_id - 1].get("court")
+            pts, H = last_court['points'], last_court['H'] if last_court is not None else self.detect_court(frames[-1])
 
-        return {"court_points": court}
+        return {"court": {'points': pts, 'H': H}}
 
     def detect_court(self, frame):
         image_np = np.array(frame)
@@ -36,8 +37,22 @@ class CourtDetector:
         raw_vert, raw_horiz = split_by_orientation(lines, width, height)
 
         corners = get_corners(raw_vert, raw_horiz)
+        
+        src_pts = np.array(corners, dtype=np.float32)
 
-        return corners
+        dst = np.array(
+            [
+                [0,0],
+                [COURT_WIDTH,0],
+                [COURT_WIDTH,COURT_LENGTH],
+                [0,COURT_LENGTH]
+            ],
+            dtype=np.float32
+        )
+
+        H, _ = cv2.findHomography(src_pts, dst)
+
+        return corners, H
 
     # remove small or non-line noise
     def filter_mask(self, raw_mask):

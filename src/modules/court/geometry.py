@@ -3,8 +3,6 @@ import itertools
 import cv2
 from scipy.spatial import ConvexHull
 
-COURT_LENGTH = 23.77
-COURT_WIDTH = 10.97
 PADDING_PIXELS = 40
 GROUP_THRESH_PX = 20
 
