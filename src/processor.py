@@ -5,8 +5,6 @@ from modules.ball.detector import BallDetector
 from modules.events.detector import EventDetector
 from modules.metrics.estimator import ShotMetricEstimator
 
-FRAME_QUEUE_SIZE = 3
-
 class VideoProcessor:
     def __init__(self, fps):
         self.context = []
@@ -37,12 +35,16 @@ class VideoProcessor:
             frames = []
             frame_id = 0
 
+            window_size = max(
+                module.window_size if hasattr(module, "window_size") else 1 for module in modules
+            )
+
             while cap.isOpened():
                 ret, frame = cap.read()
                 if not ret:
                     break
                 frames.append(frame)
-                if len(frames) > FRAME_QUEUE_SIZE:
+                if len(frames) > window_size:
                     frames.pop(0)
                 
                 frame_data = self._run_perception(frames, frame_id, modules)

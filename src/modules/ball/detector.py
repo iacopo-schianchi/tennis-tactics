@@ -12,12 +12,39 @@ trackernet_model.load_state_dict(torch.load(MODEL_WEIGHTS_PATH))
 trackernet_model.eval()
 
 class BallDetector:
+    window_size = 3
+
     def __init__(self, processor, fps):
         self.processor = processor
         self.fps = fps
 
     def wrap_angle(self, a):
         return ((a + np.pi) % (2 * np.pi)) - np.pi
+
+    def image_to_court(self, x, y, court_points):
+        if x is None or y is None or court_points is None:
+            return None, None
+
+        tl, tr, br, bl = np.asarray(court_points, dtype=np.float32)
+
+        src_pts = np.array([tl, tr, br, bl], dtype=np.float32)
+
+        dst = np.array(
+            [
+                [0,0],
+                [self.COURT_WIDTH,0],
+                [self.COURT_WIDTH,self.COURT_HEIGHT],
+                [0,self.COURT_HEIGHT]
+            ],
+            dtype=np.float32
+        )
+
+        H, _ = cv2.findHomography(src_pts, dst)
+        pt = np.array([[x, y]], dtype=np.float32)
+
+        court_pt = cv2.perspectiveTransform(pt, H)[0, 0]
+
+        return float(court_pt[0]), float(court_pt[1])
 
     def set_last_accel(self, frame_id, context, vx, vy):
         # last frame
@@ -48,9 +75,14 @@ class BallDetector:
         })
 
     def process(self, frames, frame_id, context):
-        x, y = None, None
+        x_px, y_px = None, None
         if frame_id >= 2:
-            x, y = self.detect_ball(frames)
+            x_px, y_px = self.detect_ball(frames)
+
+        x, y = None, None
+        if x_px is not None and y_px is not None:
+            court_points = context[frame_id].get("court_points")
+            x, y = self.image_to_court(x_px, y_px, court_points)
 
         vx, vy = 0, 0
         if frame_id > 2:

@@ -12,9 +12,11 @@ predictor = load_sam_model()
 
 class CourtDetector:
     def process(self, frames, frame_id, context):
-        if frame_id != 0 and context.get("court_points") is not None: return {}
+        if frame_id == 0: court = self.detect_court(frames[0])
+        else:
+            last_court = context[frame_id - 1].get("court_points")
+            court = last_court if last_court is not None else self.detect_court(frames[-1])
 
-        court = self.detect_court(frames[-1])
         return {"court_points": court}
 
     def detect_court(self, frame):
