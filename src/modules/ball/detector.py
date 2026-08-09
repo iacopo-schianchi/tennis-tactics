@@ -69,7 +69,7 @@ class BallDetector:
             H = context[frame_id].get("court").get('H')
             x, y = self.image_to_court(x_px, y_px, H)
 
-        vx, vy = 0, 0
+        vx, vy = 0, 0 # TODO: change to centered derivative instead
         if frame_id > 2:
             prev = context[frame_id - 1]['ball']
             if x is not None and prev['x'] is not None:

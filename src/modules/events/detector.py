@@ -1,6 +1,7 @@
 import numpy as np
 import joblib
 from tensorflow.keras.models import load_model
+from ...consts.consts import COURT_LENGTH, COURT_WIDTH
 
 class EventDetector:
     window_size = 21
@@ -68,21 +69,40 @@ class EventDetector:
 
         accepted_hits = self._filter_events(predicted_status, avg_probs, 1)
         accepted_bounces = self._filter_events(predicted_status, avg_probs, 2)
-        # TODO: keep only peak for continuous hit/bounce events (max prob)
 
         self.predictions_cache = []
         for frame in range(n_total):
-            self.predictions_cache.append({
+            is_hit = accepted_hits[frame]
+            is_bounce = accepted_bounces[frame]
+            
+            event = {
                 "status": int(predicted_status[frame]), # 0=none, 1=hit, 2=bounce
                 "no_event_prob": float(avg_probs[frame][0]),
 
                 "hit_prob": float(avg_probs[frame][1]),
-                "is_hit": accepted_hits[frame],
+                "is_hit": is_hit,
 
                 "bounce_prob": float(avg_probs[frame][2]),
-                "is_bounce": accepted_bounces[frame]
-            })
+                "is_bounce": is_bounce,
+                "bounce_coord_pct": None,
+                "bounce_coord_m": None
+            }
 
+            if is_bounce:
+                ball = context[frame].get("ball", {})
+
+                bx = ball.get("x")
+                by = ball.get("y")
+
+                if bx is not None and by is not None:
+                    x_pct = float(bx) / COURT_WIDTH * 100
+                    y_pct = float(by) / COURT_LENGTH * 100
+
+                    event["bounce_coord_pct"] = (x_pct, y_pct)
+                    event["bounce_coord_m"] = (bx, by)
+
+            self.predictions_cache.append(event)
+                
     # keep only highest probability event in contiguous frames
     def _filter_events(self, predicted_status, avg_probs, target_class):
         n = len(predicted_status)
@@ -104,3 +124,13 @@ class EventDetector:
             i = j + 1
 
         return accepted
+
+    def _get_players_feet(self, players):
+        feet = []
+
+        for box in players:
+            x1, _, x2, y2 = box
+            foot_x = (x1 + x2) // 2
+            feet.append((foot_x, y2))
+
+        return feet

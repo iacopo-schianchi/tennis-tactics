@@ -39,14 +39,14 @@ class PlayerDetector:
     def _dist(self, p1, p2):
         return np.sqrt((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2)
 
-    def _pixel_to_court_pct(self, x, y, H):
+    def _pixel_to_court(self, x, y, H):
         src_pt = np.array([[[x, y]]], dtype=np.float32)
         x_bev, y_bev = cv2.perspectiveTransform(src_pt, H)
 
         x_pct = (x_bev / COURT_WIDTH) * 100.0
         y_pct = (y_bev / COURT_LENGTH) * 100.0
 
-        return (x_pct, y_pct)
+        return (int(x_pct), int(y_pct)), (int(x_bev), int(y_bev))
 
     def _build_player_dict(self, bbox, court, role):
         x1, y1, x2, y2 = bbox
@@ -54,17 +54,17 @@ class PlayerDetector:
         feet_y_px = y2
 
         # pixel to percent
-        x_pct, y_pct = None, None
+        pct = (None, None)
         H = court['H']
         if H:
-            x_pct, y_pct = self._pixel_to_court_pct(feet_x_px, feet_y_px, H)
+            pct, bev = self._pixel_to_court_pct(feet_x_px, feet_y_px, H)
 
         return {
             "id": self.player_map.get(role),
-            "bbox": [float(x1), float(y1), float(x2), float(y2)],
-            "feet_px": [float(feet_x_px), float(feet_y_px)],
-            "x_pct": x_pct,
-            "y_pct": y_pct
+            "bbox": [int(x1), int(y1), int(x2), int(y2)],
+            "feet_px": [int(feet_x_px), int(feet_y_px)], # coords in image pixel coordinates
+            "feet_m": bev, # coords in meters on court suface
+            "feet_pct": pct, # coords as court %
         }
     
     def _classify_players(self, bboxes, court, frame_height):
