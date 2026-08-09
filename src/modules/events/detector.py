@@ -124,13 +124,3 @@ class EventDetector:
             i = j + 1
 
         return accepted
-
-    def _get_players_feet(self, players):
-        feet = []
-
-        for box in players:
-            x1, _, x2, y2 = box
-            foot_x = (x1 + x2) // 2
-            feet.append((foot_x, y2))
-
-        return feet
