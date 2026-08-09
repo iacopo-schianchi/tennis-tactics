@@ -1,4 +1,6 @@
 from enum import Enum
+import numpy as np
+import math
 
 SHOT_TYPE_COORD_FRAME_PAD = 5
 g = 9.81
@@ -33,9 +35,9 @@ class ShotMetricEstimator:
         frame_event = context[frame_id]['events']
         if frame_event['is_hit']:
             shot_type, stroke_height = self._estimate_shot_type(frame_id, context)
-            self.update_last_event(frame_id, context, stroke_height)
+            self._update_last_metrics(frame_id, context, stroke_height)
         elif frame_event['is_bounce']:
-            self.update_last_event(frame_id, context, 0)
+            self._update_last_metrics(frame_id, context, 0)
 
         return {
             'shot_type': shot_type,
@@ -50,30 +52,30 @@ class ShotMetricEstimator:
         players = context[frame_id]['players']
         # TODO: get player coords from surrounding frames if missing
 
-        bx, by = context[frame_id]['ball']['x'], context[frame_id]['ball']['y']
+        bx, by = context[frame_id]['ball']['x_px'], context[frame_id]['ball']['y_px']
 
         checked_offset = 1
-        while bx is None or by is None and checked_offset <= SHOT_TYPE_COORD_FRAME_PAD and frame_id - checked_offset >= 0 and frame_id + checked_offset < self.processor.total_frames:
+        while (bx is None or by is None) and checked_offset <= SHOT_TYPE_COORD_FRAME_PAD and frame_id - checked_offset >= 0 and frame_id + checked_offset < self.processor.total_frames:
             id1 = frame_id - checked_offset
             id2 = frame_id + checked_offset
 
-            bx1, by1 = context[id1]['ball']['x'], context[id1]['ball']['y']
-            bx2, by2 = context[id2]['ball']['x'], context[id2]['ball']['y']
+            bx1, by1 = context[id1]['ball']['x_px'], context[id1]['ball']['y_px']
+            bx2, by2 = context[id2]['ball']['x_px'], context[id2]['ball']['y_px']
 
             if bx1 is not None and by1 is not None:
                 bx, by = bx1, by1
-            elif by1 is not None and by2 is not None:
+            elif bx2 is not None and by2 is not None:
                 bx, by = bx2, by2
             
             checked_offset += 1
         
         if bx is None or by is None:
-            return None
+            return None, None
 
         nearest_player, is_far = self._get_nearest_player(players, bx, by)
         last_event, _ = self._get_last_event(frame_id, context)
 
-        x1, y1, x2, _ = nearest_player
+        x1, y1, x2, _ = nearest_player['bbox']
 
         mid_x = int((x1 + x2) / 2)
 
@@ -81,7 +83,7 @@ class ShotMetricEstimator:
 
         if (bx > x2 and by < y1):
             # top-right
-            if abs(bx - x2) > abs(y - y1):
+            if abs(bx - x2) > abs(by - y1):
                 shot_type = ShotTypes.BACKHAND if is_far else ShotTypes.FOREHAND
             else:
                 shot_type = ShotTypes.OVERHEAD if last_event is not None else ShotTypes.SERVE
@@ -106,7 +108,7 @@ class ShotMetricEstimator:
         return shot_type, stroke_height
     
     def _get_last_event(self, frame_id, context):
-        if frame_id == 0: return None
+        if frame_id == 0: return None, None
 
         i = frame_id - 1
         while i >= 0:
@@ -115,29 +117,45 @@ class ShotMetricEstimator:
             elif event['is_bounce']: return 'bounce', i
             i -= 1
 
+        return None, None
+
+    # returns nearest_player, is_far
     def _get_nearest_player(self, player_boxes, bx, by):
         def center(box):
             x1, y1, x2, y2 = box
             return ((x1 + x2) / 2, (y1 + y2) / 2)
 
-        return min(
-            player_boxes,
-            key=lambda box: (
-                (center(box)[0] - bx) ** 2 +
-                (center(box)[1] - by) ** 2
-            )
-        )
+        def dist(p1, p2):
+            return np.sqrt((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2)
+
+        near_dist = dist(center(player_boxes['near']['bbox']), (bx, by))
+        far_dist = dist(center(player_boxes['far']['bbox']), (bx, by))
+
+        is_near = near_dist < far_dist
+
+        return (player_boxes['near'], False) if is_near else (player_boxes['far'], True)
 
     def _update_last_metrics(self, frame_id, context, h1):
         event_type, i = self._get_last_event(frame_id, context)
-        last_event = context[i]
+        if i is None: return
+        last_context = context[i]
         frame_separation = frame_id - i
-        h0 = 0 if event_type == 'bounce' else STROKE_HEIGHTS[last_event['shot_type']]
+        h0 = 0 if event_type == 'bounce' else STROKE_HEIGHTS[last_context['shot_type']]
 
         T = frame_separation / self.processor.fps
 
         peak = self._estimate_peak(T, h0, h1)
-        speed = self._estimate_speed() # TODO
+        speed = None
+        if event_type == 'hit':
+            curr_is_hit = context[frame_id]['events']['is_hit']
+
+            ball = context[frame_id]['ball']
+            b_coords_px = (ball['x_px'], ball['y_px'])
+            b_coords = (ball['x'], ball['y'])
+            curr_nearest_player, _ = self._get_nearest_player(context[frame_id]['players'], *b_coords_px)
+            curr_court_coords = curr_nearest_player['feet_m'] if curr_is_hit else b_coords
+
+            speed = self._estimate_speed(last_context, curr_court_coords, T, h0, h1)
 
         self.processor.set_context(i, {**context[i], 'peak': peak, 'speed': speed})
 
@@ -146,5 +164,21 @@ class ShotMetricEstimator:
         t_up = v_y0 / g
         return h0 + 0.5 * g * t_up ** 2
 
-    def _estimate_speed(self):
-        pass
+    def _estimate_v_x0_linear_drag(self, d, T, k=0.25):
+        if k == 0:
+            return d / T
+        return (d * k) / (1 - math.exp(-k * T))
+
+    def _estimate_speed(self, last_context, curr_court_coords, T, h0, h1):
+        last_nearest_player, _ = self._get_nearest_player(last_context['players'], last_context['ball']['x_px'], last_context['ball']['y_px'])
+        last_x, last_y = last_nearest_player['feet_m']
+        curr_x, curr_y = curr_court_coords
+
+        d = np.sqrt((last_x - curr_x) ** 2 + (last_y - curr_y) ** 2)
+
+        v_y0 = (h1 - h0 + 0.5 * g * T ** 2) / T
+        v_x0 = self._estimate_v_x0_linear_drag(d, T)
+
+        v = math.sqrt(v_x0**2 + v_y0**2)
+
+        return v
