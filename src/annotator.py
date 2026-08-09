@@ -1,12 +1,18 @@
 import cv2
 from datetime import datetime
 from modules.court.annotator import CourtAnnotator
+from modules.ball.annotator import BallAnnotator
+from modules.metrics.annotator import MetricAnnotator
+from modules.player.annotator import PlayerAnnotator
 
 class VideoAnnotator:
     def __init__(self, context):
         self.context = context
         self.annotators = [
-            CourtAnnotator()
+            CourtAnnotator(),
+            BallAnnotator(),
+            MetricAnnotator(),
+            PlayerAnnotator(),
         ]
 
         now = datetime.now()
