@@ -3,7 +3,7 @@ import numpy as np
 
 from .sam_loader import load_sam_model, run_sam_segmentation
 from .geometry import get_convex_hull_mask
-from .line_detection import get_corners, get_lines, split_by_orientation, get_corners
+from .line_detection import get_corners, get_lines, split_by_orientation
 from ...consts.consts import COURT_LENGTH, COURT_WIDTH
 
 LOWER = np.array([110] * 3)
@@ -33,7 +33,7 @@ class CourtDetector:
         line_mask = self.filter_mask(raw_line_mask)
         lines = get_lines(line_mask)
 
-        width, height = image_np.shape[:2]
+        height, width = image_np.shape[:2]
         raw_vert, raw_horiz = split_by_orientation(lines, width, height)
 
         corners = get_corners(raw_vert, raw_horiz)
@@ -71,3 +71,5 @@ class CourtDetector:
 
             if area > 200 or area >= 15 and aspect_ratio >= 2.5:
                 mask = np.where(labels == i, 255, mask)
+
+        return mask

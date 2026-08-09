@@ -32,8 +32,6 @@ class PlayerDetector:
                     x1, y1, x2, y2 = map(int, box.xyxy[0])
                     player_boxes.append((x1, y1, x2, y2))
 
-        # TODO: keep only 2 closest players to the center of the court to filter background ppl.
-
         return player_boxes
 
     def _dist(self, p1, p2):
@@ -57,7 +55,7 @@ class PlayerDetector:
         pct = (None, None)
         H = court['H']
         if H:
-            pct, bev = self._pixel_to_court_pct(feet_x_px, feet_y_px, H)
+            pct, bev = self._pixel_to_court(feet_x_px, feet_y_px, H)
 
         return {
             "id": self.player_map.get(role),

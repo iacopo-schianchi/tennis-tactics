@@ -23,11 +23,11 @@ class VideoProcessor:
                 BallDetector(self, fps),
             ),
             (
-                EventDetector()
+                EventDetector(),
             ),
             (
                 # shot classification & peak/speed estimation
-                ShotMetricEstimator(self)
+                ShotMetricEstimator(self),
             ),
         ]
     
@@ -68,12 +68,14 @@ class VideoProcessor:
         cap.release()
 
     def _run_perception(self, frames, frame_id, modules):
-        frame_data = {}
+        if frame_id >= len(self.context):
+            self.context.append({})
 
         for module in modules:
-            frame_data.update(module.process(frames, frame_id, self.context))
-        
-        return frame_data
+            result = module.process(frames, frame_id, self.context)
+            self.context[frame_id].update(result)
+
+        return self.context[frame_id]
     
     def set_context(self, frame_id, context):
-        if self.get(frame_id): self.context[frame_id] = context
+        if 0 <= frame_id < len(self.context): self.context[frame_id] = context

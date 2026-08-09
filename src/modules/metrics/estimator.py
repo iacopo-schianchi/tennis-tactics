@@ -27,16 +27,17 @@ class ShotMetricEstimator:
     def __init__(self, processor):
         self.processor = processor
 
-    def process(self, frames, frame_id, context):
+    def process(self, _frames, frame_id, context):
         # shot type, peak, speed
 
         shot_type = None
 
-        frame_event = context[frame_id]['events']
-        if frame_event['is_hit']:
+        frame_event = context[frame_id].get('event', {}) if isinstance(context[frame_id], dict) else {}
+        if frame_event.get('is_hit'):
             shot_type, stroke_height = self._estimate_shot_type(frame_id, context)
-            self._update_last_metrics(frame_id, context, stroke_height)
-        elif frame_event['is_bounce']:
+            if shot_type is not None:
+                self._update_last_metrics(frame_id, context, stroke_height)
+        elif frame_event.get('is_bounce'):
             self._update_last_metrics(frame_id, context, 0)
 
         return {
@@ -46,11 +47,38 @@ class ShotMetricEstimator:
             'peak': None,
             'speed': None,
         }
-        
+
+    def _get_surrounding_players(self, frame_id, context):
+        players = context[frame_id].get('players') if isinstance(context[frame_id], dict) else None
+        near = players.get('near') if players else None
+        far = players.get('far') if players else None
+
+        checked_offset = 1
+        while (near is None or far is None) and checked_offset <= SHOT_TYPE_COORD_FRAME_PAD and frame_id - checked_offset >= 0 and frame_id + checked_offset < self.processor.total_frames:
+            id1 = frame_id - checked_offset
+            id2 = frame_id + checked_offset
+
+            players1 = context[id1].get('players') if isinstance(context[id1], dict) else None
+            players2 = context[id2].get('players') if isinstance(context[id2], dict) else None
+
+            if near is None:
+                if players1 and players1.get('near') is not None:
+                    near = players1['near']
+                elif players2 and players2.get('near') is not None:
+                    near = players2['near']
+
+            if far is None:
+                if players1 and players1.get('far') is not None:
+                    far = players1['far']
+                elif players2 and players2.get('far') is not None:
+                    far = players2['far']
+
+            checked_offset += 1
+
+        return {'near': near, 'far': far}
 
     def _estimate_shot_type(self, frame_id, context):
-        players = context[frame_id]['players']
-        # TODO: get player coords from surrounding frames if missing
+        players = self._get_surrounding_players(frame_id, context)
 
         bx, by = context[frame_id]['ball']['x_px'], context[frame_id]['ball']['y_px']
 
@@ -73,6 +101,9 @@ class ShotMetricEstimator:
             return None, None
 
         nearest_player, is_far = self._get_nearest_player(players, bx, by)
+        if nearest_player is None:
+            return None, None
+        
         last_event, _ = self._get_last_event(frame_id, context)
 
         x1, y1, x2, _ = nearest_player['bbox']
@@ -112,7 +143,7 @@ class ShotMetricEstimator:
 
         i = frame_id - 1
         while i >= 0:
-            event = context[i]['events']
+            event = context[i]['event']
             if event['is_hit']: return 'hit', i
             elif event['is_bounce']: return 'bounce', i
             i -= 1
@@ -121,6 +152,12 @@ class ShotMetricEstimator:
 
     # returns nearest_player, is_far
     def _get_nearest_player(self, player_boxes, bx, by):
+        if not player_boxes or (player_boxes.get('near') is None and player_boxes.get('far') is None):
+            return None, None
+
+        near = player_boxes.get('near')
+        far = player_boxes.get('far')
+
         def center(box):
             x1, y1, x2, y2 = box
             return ((x1 + x2) / 2, (y1 + y2) / 2)
@@ -128,30 +165,44 @@ class ShotMetricEstimator:
         def dist(p1, p2):
             return np.sqrt((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2)
 
-        near_dist = dist(center(player_boxes['near']['bbox']), (bx, by))
-        far_dist = dist(center(player_boxes['far']['bbox']), (bx, by))
+        if near is None:
+            return far, True
+        if far is None:
+            return near, False
+
+        near_dist = dist(center(near['bbox']), (bx, by))
+        far_dist = dist(center(far['bbox']), (bx, by))
 
         is_near = near_dist < far_dist
 
-        return (player_boxes['near'], False) if is_near else (player_boxes['far'], True)
+        return (near, False) if is_near else (far, True)
 
     def _update_last_metrics(self, frame_id, context, h1):
         event_type, i = self._get_last_event(frame_id, context)
         if i is None: return
+
         last_context = context[i]
         frame_separation = frame_id - i
-        h0 = 0 if event_type == 'bounce' else STROKE_HEIGHTS[last_context['shot_type']]
+        prev_shot_type = last_context.get('shot_type') if isinstance(last_context, dict) else None
+        if event_type == 'bounce':
+            h0 = 0
+        else:
+            if prev_shot_type in STROKE_HEIGHTS:
+                h0 = STROKE_HEIGHTS[prev_shot_type]
+            else:
+                h0 = 1.1 # fallback if not available
 
         T = frame_separation / self.processor.fps
 
         peak = self._estimate_peak(T, h0, h1)
         speed = None
         if event_type == 'hit':
-            curr_is_hit = context[frame_id]['events']['is_hit']
+            curr_is_hit = context[frame_id]['event']['is_hit']
 
             ball = context[frame_id]['ball']
             b_coords_px = (ball['x_px'], ball['y_px'])
             b_coords = (ball['x'], ball['y'])
+
             curr_nearest_player, _ = self._get_nearest_player(context[frame_id]['players'], *b_coords_px)
             curr_court_coords = curr_nearest_player['feet_m'] if curr_is_hit else b_coords
 

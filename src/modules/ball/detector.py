@@ -25,7 +25,7 @@ class BallDetector:
         if x is None or y is None or H is None:
             return None, None
 
-        pt = np.array([[x, y]], dtype=np.float32)
+        pt = np.array([[[x, y]]], dtype=np.float32)
 
         court_pt = cv2.perspectiveTransform(pt, H)[0, 0]
 
@@ -84,14 +84,14 @@ class BallDetector:
         if frame_id <= 2:
             angle = 0.0
         elif speed < 0.1:
-            angle = context[frame_id-1]["angle"]
+            angle = context[frame_id-1]["ball"]["angle"]
         else:
             angle = np.arctan2(vy, vx)
 
         if frame_id <= 2:
             delta_angle = 0.0
         else:
-            raw_delta = angle - context[frame_id - 1]['angle']
+            raw_delta = angle - context[frame_id - 1]["ball"]['angle']
             delta_angle = self.wrap_angle(raw_delta) * self.fps
 
         return {
