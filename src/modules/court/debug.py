@@ -37,7 +37,7 @@ def show_detection_debug(
     # all lines
     axes[1, 1].imshow(image)
 
-    if lines:
+    if lines is not None:
         for line in lines:
             x1, y1, x2, y2 = line.flatten()
             axes[1, 1].plot(
