@@ -71,6 +71,8 @@ def fit_line_through_segments(cluster):
     for line in cluster:
         points.extend([(line[0], line[1]), (line[2], line[3])])
 
+    points = np.asarray(points, dtype=np.float32)
+
     vx, vy, x0, y0 = cv2.fitLine(points, cv2.DIST_L2, 0, 0.01, 0.01).flatten()
     return vx, vy, x0, y0
 
