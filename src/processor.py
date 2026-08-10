@@ -74,7 +74,7 @@ class VideoProcessor:
         self._run_annotation(video_path)
 
     def _run_annotation(self, video_path):
-        annotator = VideoAnnotator(self.context)
+        annotator = VideoAnnotator(self.context, self.fps)
         annotator.render(video_path)
 
     def _run_perception(self, frames, frame_id, modules):

@@ -6,7 +6,7 @@ from modules.metrics.annotator import MetricAnnotator
 from modules.player.annotator import PlayerAnnotator
 
 class VideoAnnotator:
-    def __init__(self, context):
+    def __init__(self, context, fps=30):
         self.context = context
         self.annotators = [
             CourtAnnotator(),
@@ -14,6 +14,7 @@ class VideoAnnotator:
             MetricAnnotator(),
             PlayerAnnotator(),
         ]
+        self.fps = fps
 
         now = datetime.now()
         date_str = now.strftime("%Y-%m-%d-%H-%M-%S")
