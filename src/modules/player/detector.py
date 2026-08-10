@@ -54,7 +54,7 @@ class PlayerDetector:
         # pixel to percent
         pct = (None, None)
         H = court['H']
-        if H:
+        if H is not None:
             pct, bev = self._pixel_to_court(feet_x_px, feet_y_px, H)
 
         return {
