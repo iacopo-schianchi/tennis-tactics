@@ -27,13 +27,13 @@ class BallAnnotator():
             point = (int(bx), int(by))
 
             if is_hit:
-                color = COLORS_BGR.RED
+                color = COLORS_BGR.RED.value
             elif last_hit_frame is not None:
                 frames_since_hit = (start_i + i) - last_hit_frame
                 t = min(frames_since_hit / self.BALL_TRAIL_FRAMES, 1.0)
-                color = interpolate_colors(COLORS_BGR.RED, COLORS_BGR.YELLOW, t)
+                color = interpolate_colors(COLORS_BGR.RED.value, COLORS_BGR.YELLOW.value, t)
             else:
-                color = COLORS_BGR.YELLOW
+                color = COLORS_BGR.YELLOW.value
 
             if prev_point is not None:
                 cv2.line(frame, prev_point, point, color, 2)

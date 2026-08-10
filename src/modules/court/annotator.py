@@ -21,7 +21,7 @@ MINIMAP_BOUNCE_MAX_RADIUS = 8
 
 MINIMAP_BG_COLOR = (40, 90, 40)
 MINIMAP_BORDER_COLOR = (60, 140, 60)
-MINIMAP_LINE_COLOR = COLORS_BGR.WHITE
+MINIMAP_LINE_COLOR = COLORS_BGR.WHITE.value
 
 MINIMAP_LINES_M = [
     # outer boundary
@@ -101,7 +101,7 @@ class CourtAnnotator():
                 feet = player.get('feet_m')
                 if not feet: continue
                 px, py = to_minimap_px(*feet)
-                cv2.circle(frame, (px, py), 5, COLORS_BGR.RED, -1)
+                cv2.circle(frame, (px, py), 5, COLORS_BGR.RED.value, -1)
 
         # bounce
         start_i = max(0, frame_id - MINIMAP_BOUNCE_WINDOW)
@@ -120,7 +120,7 @@ class CourtAnnotator():
                 t = 1 - (frames_since / MINIMAP_BOUNCE_WINDOW)
                 radius = max(1, int(MINIMAP_BOUNCE_MAX_RADIUS * t))
                 px, py = to_minimap_px(bx_m, by_m)
-                cv2.circle(frame, (px, py), radius, COLORS_BGR.BLUE, -1)
+                cv2.circle(frame, (px, py), radius, COLORS_BGR.BLUE.value, -1)
 
         return frame
 

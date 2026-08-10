@@ -195,7 +195,7 @@ class ShotMetricEstimator:
         T = frame_separation / self.processor.fps
 
         peak = self._estimate_peak(T, h0, h1)
-        speed = None
+        speed_kmh = None
         if event_type == 'hit':
             curr_is_hit = context[frame_id]['event']['is_hit']
 
@@ -207,8 +207,9 @@ class ShotMetricEstimator:
             curr_court_coords = curr_nearest_player['feet_m'] if curr_is_hit else b_coords
 
             speed = self._estimate_speed(last_context, curr_court_coords, T, h0, h1)
+            speed_kmh = speed * 3.6
 
-        self.processor.set_context(i, {**context[i], 'peak': peak, 'speed': speed})
+        self.processor.set_context(i, {**context[i], 'peak': peak, 'speed': speed_kmh})
 
     def _estimate_peak(self, T, h0, h1):
         v_y0 = (h1 - h0 + 0.5 * g * T ** 2) / T
