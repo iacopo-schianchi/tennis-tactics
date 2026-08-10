@@ -10,8 +10,8 @@ MAX_LINE_GAP = 120
 
 HORIZ_ANGLE_THRESH = 25
 VERT_ANGLE_THRESH = 60
-MIN_WIDTH_FRACTION = 0.15
-MIN_HEIGHT_FRACTION = 0.3
+MIN_WIDTH_FRACTION = 0.22
+MIN_HEIGHT_FRACTION = 0.4
 
 LINE_CLUSTER_THERSH = 25
 
@@ -55,21 +55,21 @@ def split_by_orientation(lines, img_w, img_h):
             
     return horiz, vert
 
-
 def cluster_segments(centers, segments):
     if not segments:
         return []
 
     clusters = [[segments[0]]]
+    cluster_starts = [centers[0]]
 
     for i in range(1, len(segments)):
         curr = centers[i]
-        last = centers[i - 1]
 
-        if abs(curr - last) <= LINE_CLUSTER_THERSH:
+        if abs(curr - cluster_starts[-1]) <= LINE_CLUSTER_THERSH:
             clusters[-1].append(segments[i])
         else:
             clusters.append([segments[i]])
+            cluster_starts.append(curr)
 
     return clusters
 
