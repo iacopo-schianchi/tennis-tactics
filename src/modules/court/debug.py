@@ -80,37 +80,8 @@ def show_detection_debug(
     # grouped lines
     axes[2, 0].imshow(image)
 
-    v_pairs = sorted(
-        [
-            ((line[0] + line[2]) / 2, line)
-            for line in vert
-        ],
-        key=lambda x: x[0]
-    )
-
-    h_pairs = sorted(
-        [
-            ((line[1] + line[3]) / 2, line)
-            for line in horiz
-        ],
-        key=lambda x: x[0]
-    )
-
-    v_centers = [x[0] for x in v_pairs]
-    v_segments = [x[1] for x in v_pairs]
-
-    h_centers = [x[0] for x in h_pairs]
-    h_segments = [x[1] for x in h_pairs]
-
-    v_clusters = cluster_segments(
-        v_centers,
-        v_segments
-    )
-
-    h_clusters = cluster_segments(
-        h_centers,
-        h_segments
-    )
+    v_clusters = cluster_segments(vert)
+    h_clusters = cluster_segments(horiz)
 
     # horiz clusters
     for cluster_id, cluster in enumerate(h_clusters):
