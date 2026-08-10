@@ -41,9 +41,16 @@ def split_by_orientation(lines, img_w, img_h):
         length = np.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
         angle = abs(np.degrees(np.arctan2(y2 - y1, x2 - x1))) % 180
 
-        if (angle < HORIZ_ANGLE_THRESH and length >= min_length_w):
+        # dist from horiz
+        horizontal_angle = min(angle, 180 - angle)
+
+        # dist from vert
+        vertical_angle = abs(angle - 90)
+
+        if horizontal_angle < HORIZ_ANGLE_THRESH and length >= min_length_w:
             horiz.append(line.flatten())
-        elif (abs(angle - 90) < VERT_ANGLE_THRESH and length >= min_length_h):
+
+        elif vertical_angle < VERT_ANGLE_THRESH and length >= min_length_h:
             vert.append(line.flatten())
             
     return horiz, vert

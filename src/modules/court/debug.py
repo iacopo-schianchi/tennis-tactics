@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import matplotlib
 import numpy as np
 
 from .line_detection import cluster_segments, fit_line_through_segments
@@ -13,6 +14,7 @@ def show_detection_debug(
     vert,
     corners,
 ):
+    print('Matplotlib backend: ', matplotlib.get_backend())
     fig, axes = plt.subplots(3, 3, figsize=(18, 14))
 
     axes[0, 0].imshow(image)
@@ -108,16 +110,32 @@ def show_detection_debug(
         h_segments
     )
 
-    # Draw every cluster's segments.
-    for cluster in h_clusters + v_clusters:
+    # horiz clusters
+    for cluster_id, cluster in enumerate(h_clusters):
+        color = plt.cm.tab10(cluster_id % 10)
+
         for line in cluster:
             x1, y1, x2, y2 = line
             axes[2, 0].plot(
                 [x1, x2],
                 [y1, y2],
+                color=color,
                 linewidth=2
             )
 
+    # vert clusters
+    for cluster_id, cluster in enumerate(v_clusters):
+        color = plt.cm.Set2(cluster_id % 8)
+
+        for line in cluster:
+            x1, y1, x2, y2 = line
+            axes[2, 0].plot(
+                [x1, x2],
+                [y1, y2],
+                color=color,
+                linewidth=2
+            )
+            
     axes[2, 0].set_title(
         f"Clusters: H={len(h_clusters)}, V={len(v_clusters)}"
     )
