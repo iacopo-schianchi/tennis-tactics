@@ -4,6 +4,7 @@ import numpy as np
 from .sam_loader import load_sam_model, run_sam_segmentation
 from .geometry import get_convex_hull_mask
 from .line_detection import get_corners, get_lines, split_by_orientation
+from .debug import show_detection_debug
 from utils.consts import COURT_LENGTH, COURT_WIDTH
 
 LOWER = np.array([110] * 3)
@@ -14,7 +15,7 @@ predictor = load_sam_model()
 class CourtDetector:
     def process(self, frames, frame_id, context):
         if frame_id == 0:
-            pts, H = self.detect_court(frames[0])
+            pts, H = self.detect_court(frames[0], True)
         else:
             last_court = context[frame_id - 1].get("court")
 
@@ -22,7 +23,7 @@ class CourtDetector:
                 pts = last_court["points"]
                 H = last_court["H"]
             else:
-                pts, H = self.detect_court(frames[-1])
+                pts, H = self.detect_court(frames[-1], True)
 
         return {
             "court": {
@@ -31,7 +32,7 @@ class CourtDetector:
             }
         }
 
-    def detect_court(self, frame):
+    def detect_court(self, frame, debug = False):
         image_np = np.array(frame)
 
         # SAM background removal
@@ -62,6 +63,18 @@ class CourtDetector:
         )
 
         H, _ = cv2.findHomography(src_pts, dst)
+
+        if debug:
+            show_detection_debug(
+                image_np,
+                raw_mask,
+                mask,
+                line_mask,
+                lines,
+                raw_horiz,
+                raw_vert,
+                corners
+            )
 
         return corners, H
 
