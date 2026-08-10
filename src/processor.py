@@ -33,11 +33,14 @@ class VideoProcessor:
         ]
     
     def process(self, video_path):
+        print("Processing video...")
+        
         cap = cv2.VideoCapture(video_path)
         
         self.total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
         for i, modules in enumerate(self.passes):
+            print(f"Pass {i+1}")
             frames = []
             frame_id = 0
 
@@ -61,8 +64,8 @@ class VideoProcessor:
                 else:
                     self.context[frame_id].update(frame_data)
 
-                if frame_id % 100 == 0:
-                    print(f"Pass {i} | Processed {frame_id}/{self.total_frames} frames")
+                if frame_id % 10 == 0:
+                    print(f"Processed {frame_id}/{self.total_frames} frames")
                 
                 frame_id += 1
         

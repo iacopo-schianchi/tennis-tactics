@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 from ultralytics import YOLO
-from ...consts.consts import COURT_WIDTH, COURT_LENGTH
+from utils.consts import COURT_WIDTH, COURT_LENGTH
 
 yolo = YOLO("yolov8n.pt")
 

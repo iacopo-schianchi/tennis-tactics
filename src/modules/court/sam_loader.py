@@ -1,10 +1,14 @@
 import numpy as np
-import torch
-import os
 
 from segment_anything import SamPredictor, sam_model_registry
+from pathlib import Path
 
-CHECKPOINT_PATH = os.path.join(os.path.dirname(__file__), '..', 'models', 'sam_vit_b_01ec64.pth')
+CHECKPOINT_PATH = (
+    Path(__file__).resolve().parents[3]
+    / "src"
+    / "models"
+    / "sam_vit_b_01ec64.pth"
+)
 
 def load_sam_model(device=None):
     sam = sam_model_registry["vit_b"](checkpoint=CHECKPOINT_PATH).to(device)

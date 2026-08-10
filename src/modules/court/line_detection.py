@@ -1,6 +1,5 @@
 import cv2
 import numpy as np
-from .geometry import fit_line_through_segments
 
 CANNY_THRESHOLD1 = 20
 CANNY_THRESHOLD2 = 80

@@ -1,11 +1,17 @@
 import numpy as np
-import os
 import torch
 import cv2
-from src.models.tracknet.model import BallTrackerNet
-from src.models.tracknet.postprocess import postprocess
+from models.tracknet.model import BallTrackerNet
+from models.tracknet.postprocess import postprocess
+from pathlib import Path
 
-MODEL_WEIGHTS_PATH = os.path.join(os.path.dirname(__file__), '..', 'models', 'tracknet.pt')
+MODEL_WEIGHTS_PATH = (
+    Path(__file__).resolve().parents[3]
+    / "src"
+    / "models"
+    / "tracknet"
+    / "tracknet.pt"
+)
 
 trackernet_model = BallTrackerNet()
 trackernet_model.load_state_dict(torch.load(MODEL_WEIGHTS_PATH))

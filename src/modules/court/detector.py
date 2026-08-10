@@ -4,7 +4,7 @@ import numpy as np
 from .sam_loader import load_sam_model, run_sam_segmentation
 from .geometry import get_convex_hull_mask
 from .line_detection import get_corners, get_lines, split_by_orientation
-from ...consts.consts import COURT_LENGTH, COURT_WIDTH
+from utils.consts import COURT_LENGTH, COURT_WIDTH
 
 LOWER = np.array([110] * 3)
 UPPER = np.array([255] * 3)
