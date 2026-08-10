@@ -113,7 +113,7 @@ def show_detection_debug(
 
     # horiz clusters
     for cluster_id, cluster in enumerate(h_clusters):
-        color = COLORS_BGR.RED.value
+        color = (0.0, 0.0, 1.0)
 
         for line in cluster:
             x1, y1, x2, y2 = line
@@ -126,7 +126,7 @@ def show_detection_debug(
 
     # vert clusters
     for cluster_id, cluster in enumerate(v_clusters):
-        color = COLORS_BGR.BLUE.value
+        color = (1.0, 0.0, 0.0)
 
         for line in cluster:
             x1, y1, x2, y2 = line
