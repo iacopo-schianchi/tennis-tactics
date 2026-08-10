@@ -55,7 +55,7 @@ def split_by_orientation(lines, img_w, img_h):
         elif vertical_angle < VERT_ANGLE_THRESH and length >= min_length_h:
             vert.append(line.flatten())
             
-    return horiz, vert
+    return vert, horiz
 
 def line_to_rho_theta(line):
     x1, y1, x2, y2 = line
