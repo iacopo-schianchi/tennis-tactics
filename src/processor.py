@@ -4,7 +4,7 @@ from modules.player.detector import PlayerDetector
 from modules.ball.detector import BallDetector
 from modules.events.detector import EventDetector
 from modules.metrics.estimator import ShotMetricEstimator
-from .annotator import VideoAnnotator
+from annotator import VideoAnnotator
 
 class VideoProcessor:
     def __init__(self, far_player_id, near_player_id, fps = 30):
