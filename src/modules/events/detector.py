@@ -12,7 +12,7 @@ class EventDetector:
 
     def __init__(self):
         self.model = load_model('src/models/bilstm_event_classifier_small.keras')
-        self.scaler = joblib.load('src/models/bilstm_event_scaler_small.pkl')
+        self.scaler = joblib.load('src/models/feature_scaler_small.pkl')
         self.predictions_cache = None
 
     def process(self, _frames, frame_id, context):
