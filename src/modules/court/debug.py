@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import matplotlib
 import numpy as np
 from utils.consts import COLORS_BGR
+import numpy as np
 
 from .line_detection import cluster_segments, fit_line_through_segments
 
@@ -113,22 +114,28 @@ def show_detection_debug(
 
     # horiz clusters
     for cluster_id, cluster in enumerate(h_clusters):
+        color = np.random.rand(3)
+
         for line in cluster:
             x1, y1, x2, y2 = line
             axes[2, 0].plot(
                 [x1, x2],
                 [y1, y2],
+                color=color,
                 linestyle='--',
                 linewidth=2
             )
 
     # vert clusters
     for cluster_id, cluster in enumerate(v_clusters):
+        color = np.random.rand(3)
+
         for line in cluster:
             x1, y1, x2, y2 = line
             axes[2, 0].plot(
                 [x1, x2],
                 [y1, y2],
+                color=color,
                 linestyle='-',
                 linewidth=2
             )
