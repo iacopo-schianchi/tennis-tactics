@@ -1,11 +1,27 @@
 import cv2
-from pathlib import Path
 import json
+import numpy as np
+from pathlib import Path
 from datetime import datetime
 from modules.court.annotator import CourtAnnotator
 from modules.ball.annotator import BallAnnotator
 from modules.metrics.annotator import MetricAnnotator
 from modules.player.annotator import PlayerAnnotator
+
+def json_default(obj):
+    if isinstance(obj, np.ndarray):
+        return obj.tolist()
+
+    if isinstance(obj, np.integer):
+        return int(obj)
+
+    if isinstance(obj, np.floating):
+        return float(obj)
+
+    if isinstance(obj, np.bool_):
+        return bool(obj)
+
+    raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
 
 class VideoAnnotator:
     def __init__(self, context, fps=30):
@@ -28,8 +44,11 @@ class VideoAnnotator:
 
         context_path = str(OUTPUT_DIR / f"{date_str}-context.json")
 
-        with open(context_path, "w") as f:
-            json.dump(context, f, indent=2)
+        try:
+            with open(context_path, "w") as f:
+                json.dump(context, f, indent=2, default=json_default)
+        except Exception as e:
+            print("Failed uploading context: ", e)
 
         print(f"Saving annotated video to: {self.OUTPUT_PATH} and context to: {context_path}")
 
