@@ -4,7 +4,7 @@ import numpy as np
 from utils.consts import COLORS_BGR
 import numpy as np
 
-from .line_detection import cluster_segments, fit_line_through_segments
+from .line_detection import cluster_segments, get_boundary_lines
 
 def show_detection_debug(
     image,
@@ -120,43 +120,9 @@ def show_detection_debug(
     axes[2, 1].imshow(image)
 
     if len(h_clusters) >= 2 and len(v_clusters) >= 2:
-
-        top_cluster = min(
-            h_clusters,
-            key=lambda c: np.mean(
-                [(l[1] + l[3]) / 2 for l in c]
-            )
-        )
-
-        bottom_cluster = max(
-            h_clusters,
-            key=lambda c: np.mean(
-                [(l[1] + l[3]) / 2 for l in c]
-            )
-        )
-
-        left_cluster = min(
-            v_clusters,
-            key=lambda c: np.mean(
-                [(l[0] + l[2]) / 2 for l in c]
-            )
-        )
-
-        right_cluster = max(
-            v_clusters,
-            key=lambda c: np.mean(
-                [(l[0] + l[2]) / 2 for l in c]
-            )
-        )
-
-        fitted = [
-            fit_line_through_segments(top_cluster),
-            fit_line_through_segments(bottom_cluster),
-            fit_line_through_segments(left_cluster),
-            fit_line_through_segments(right_cluster),
-        ]
-
         height, width = image.shape[:2]
+
+        fitted = get_boundary_lines(h_clusters, v_clusters, width, height)
 
         for vx, vy, x0, y0 in fitted:
 

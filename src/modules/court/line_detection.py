@@ -10,8 +10,8 @@ MAX_LINE_GAP = 120
 
 HORIZ_ANGLE_THRESH = 25
 VERT_ANGLE_THRESH = 60
-MIN_WIDTH_FRACTION = 0.15
-MIN_HEIGHT_FRACTION = 0.3
+MIN_WIDTH_FRACTION = 0.22
+MIN_HEIGHT_FRACTION = 0.4
 
 LINE_CLUSTER_THERSH = 25
 RHO_THRESH = 20.0
@@ -140,22 +140,54 @@ def find_infinite_line_intersection(line1, line2):
 
     return (round(x), round(y))
 
-def get_corners(raw_vert, raw_horiz):
+def y_at_x(line, x):
+    vx, vy, x0, y0 = line
+
+    if abs(vx) < 1e-8:
+        return None
+
+    t = (x - x0) / vx
+    return y0 + t * vy
+
+
+def x_at_y(line, y):
+    vx, vy, x0, y0 = line
+
+    if abs(vy) < 1e-8:
+        return None
+
+    t = (y - y0) / vy
+    return x0 + t * vx
+
+def get_boundary_lines(h_clusters, v_clusters, img_w, img_h):
+    h_lines = [fit_line_through_segments(cluster) for cluster in h_clusters]
+    v_lines = [fit_line_through_segments(cluster) for cluster in v_clusters]
+
+    center_x = img_w / 2
+    center_y = img_h / 2
+
+    h_positions = [(y_at_x(line, center_x), line) for line in h_lines]
+    v_positions = [(x_at_y(line, center_y), line)for line in v_lines]
+
+    h_positions = [(pos, line) for pos, line in h_positions if pos is not None]
+    v_positions = [(pos, line) for pos, line in v_positions if pos is not None]
+
+    if len(h_positions) < 2 or len(v_positions) < 2:
+        return None
+
+    top_line = min(h_positions, key=lambda x: x[0])[1]
+    bottom_line = max(h_positions, key=lambda x: x[0])[1]
+
+    left_line = min(v_positions, key=lambda x: x[0])[1]
+    right_line = max(v_positions, key=lambda x: x[0])[1]
+
+    return top_line, bottom_line, left_line, right_line
+
+def get_corners(raw_vert, raw_horiz, img_w, img_h):
     v_clusters = cluster_segments(raw_vert)
     h_clusters = cluster_segments(raw_horiz)
 
-    if len(h_clusters) < 2 or len(v_clusters) < 2:
-        return None
-
-    top_cluster = min(h_clusters, key=lambda c: np.mean([(l[1] + l[3]) / 2 for l in c]))
-    bottom_cluster = max(h_clusters, key=lambda c: np.mean([(l[1] + l[3]) / 2 for l in c]))
-    left_cluster = min(v_clusters, key=lambda c: np.mean([(l[0] + l[2]) / 2 for l in c]))
-    right_cluster = max(v_clusters, key=lambda c: np.mean([(l[0] + l[2]) / 2 for l in c]))
-
-    top_line = fit_line_through_segments(top_cluster)
-    bottom_line = fit_line_through_segments(bottom_cluster)
-    left_line = fit_line_through_segments(left_cluster)
-    right_line = fit_line_through_segments(right_cluster)
+    top_line, bottom_line, left_line, right_line = get_boundary_lines(h_clusters, v_clusters, img_w, img_h)
 
     tl = find_infinite_line_intersection(top_line, left_line)
     tr = find_infinite_line_intersection(top_line, right_line)
