@@ -1,5 +1,5 @@
 import cv2
-from ...utils.consts import COLORS_BGR
+from utils.consts import COLORS_BGR
 
 class PlayerAnnotator:
     def draw(self, frame, frame_id, context):

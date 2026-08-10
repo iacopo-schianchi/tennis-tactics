@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
-from ...utils.helpers import interpolate_colors
-from ...utils.consts import COLORS_BGR
+from utils.helpers import interpolate_colors
+from utils.consts import COLORS_BGR
 
 class BallAnnotator():
     BALL_TRAIL_FRAMES = 8

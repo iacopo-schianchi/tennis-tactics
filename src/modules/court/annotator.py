@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-from ...utils.consts import COLORS_BGR
+from utils.consts import COLORS_BGR
 
 # court config
 COURT_LENGTH_M = 23.77

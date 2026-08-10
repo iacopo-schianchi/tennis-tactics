@@ -1,7 +1,7 @@
 import numpy as np
 import joblib
 from tensorflow.keras.models import load_model
-from ...consts.consts import COURT_LENGTH, COURT_WIDTH
+from utils.consts import COURT_LENGTH, COURT_WIDTH
 
 class EventDetector:
     window_size = 21
