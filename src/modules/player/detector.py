@@ -39,7 +39,7 @@ class PlayerDetector:
 
     def _pixel_to_court(self, x, y, H):
         src_pt = np.array([[[x, y]]], dtype=np.float32)
-        x_bev, y_bev = cv2.perspectiveTransform(src_pt, H)
+        x_bev, y_bev = cv2.perspectiveTransform(src_pt, H)[0, 0]
 
         x_pct = (x_bev / COURT_WIDTH) * 100.0
         y_pct = (y_bev / COURT_LENGTH) * 100.0
