@@ -36,11 +36,18 @@ class VideoProcessor:
         print("Processing video...")
         
         cap = cv2.VideoCapture(video_path)
-        
         self.total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        cap.release()
 
         for i, modules in enumerate(self.passes):
             print(f"Pass {i+1}")
+
+            cap = cv2.VideoCapture(video_path)
+            print("Video path:", video_path)
+            print("Capture opened:", cap.isOpened())
+            print("Frame count:", cap.get(cv2.CAP_PROP_FRAME_COUNT))
+            print("FPS:", cap.get(cv2.CAP_PROP_FPS))
+
             frames = []
             frame_id = 0
 
@@ -69,7 +76,7 @@ class VideoProcessor:
                 
                 frame_id += 1
         
-        cap.release()
+            cap.release()
 
         self._run_annotation(video_path)
 
