@@ -3,6 +3,7 @@ import json
 import numpy as np
 from pathlib import Path
 from datetime import datetime
+from enum import Enum
 from modules.court.annotator import CourtAnnotator
 from modules.ball.annotator import BallAnnotator
 from modules.metrics.annotator import MetricAnnotator
@@ -20,6 +21,9 @@ def json_default(obj):
 
     if isinstance(obj, np.bool_):
         return bool(obj)
+    
+    if isinstance(obj, Enum):
+        return obj.value
 
     raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
 
