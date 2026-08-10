@@ -18,7 +18,7 @@ def get_convex_hull_mask(raw_mask):
     hull = cv2.convexHull(all_points)
 
     hull_mask = np.zeros_like(mask)
-    hull_mask.filLConvexPoly(hull_mask, hull, True)
+    hull_mask.fillConvexPoly(hull_mask, hull, True)
 
     kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (2 * PADDING_PIXELS + 1, 2 * PADDING_PIXELS + 1))
     padded_mask = cv2.dilate(hull_mask, kernel)
