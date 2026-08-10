@@ -14,6 +14,8 @@ MIN_WIDTH_FRACTION = 0.22
 MIN_HEIGHT_FRACTION = 0.4
 
 LINE_CLUSTER_THERSH = 25
+RHO_THRESH = 30.0
+THETHA_THRESH = np.radians(5)
 
 def get_lines(mask):
     edges = cv2.Canny(mask, CANNY_THRESHOLD1, CANNY_THRESHOLD2)
@@ -55,21 +57,56 @@ def split_by_orientation(lines, img_w, img_h):
             
     return horiz, vert
 
-def cluster_segments(centers, segments):
+def line_to_rho_theta(line):
+    x1, y1, x2, y2 = line
+    
+    theta = np.arctan2(y2 - y1, x2 - x1)
+    
+    if theta < 0:
+        theta += np.pi
+    
+    rho = x1 * np.sin(theta) - y1 * np.cos(theta)
+    
+    if rho < 0:
+        rho = -rho
+        theta = (theta + np.pi) % np.pi
+        
+    return rho, theta
+
+def cluster_segments(segments):
     if not segments:
         return []
 
-    clusters = [[segments[0]]]
-    cluster_starts = [centers[0]]
+    params = [line_to_rho_theta(seg) for seg in segments]
+    
+    clusters = []
+    used = [False] * len(segments)
 
-    for i in range(1, len(segments)):
-        curr = centers[i]
+    for i in range(len(segments)):
+        if used[i]:
+            continue
 
-        if abs(curr - cluster_starts[-1]) <= LINE_CLUSTER_THERSH:
-            clusters[-1].append(segments[i])
-        else:
-            clusters.append([segments[i]])
-            cluster_starts.append(curr)
+        current_cluster = [segments[i]]
+        used[i] = True
+        
+        rho1, theta1 = params[i]
+
+        for j in range(i + 1, len(segments)):
+            if used[j]:
+                continue
+
+            rho2, theta2 = params[j]
+
+            d_theta = abs(theta1 - theta2)
+            d_theta = min(d_theta, np.pi - d_theta)
+
+            d_rho = abs(rho1 - rho2)
+
+            if d_rho <= RHO_THRESH and d_theta <= THETHA_THRESH:
+                current_cluster.append(segments[j])
+                used[j] = True
+
+        clusters.append(current_cluster)
 
     return clusters
 
@@ -104,30 +141,8 @@ def find_infinite_line_intersection(line1, line2):
     return (round(x), round(y))
 
 def get_corners(raw_vert, raw_horiz):
-    vert_pairs = sorted(
-        [
-            ((l[0] + l[2]) / 2, l)
-            for l in raw_vert
-        ],
-        key=lambda x: x[0]
-    )
-
-    horiz_pairs = sorted(
-        [
-            ((l[1] + l[3]) / 2, l)
-            for l in raw_horiz
-        ],
-        key=lambda x: x[0]
-    )
-
-    v_centers = [center for center, _ in vert_pairs]
-    v_segments = [segment for _, segment in vert_pairs]
-
-    h_centers = [center for center, _ in horiz_pairs]
-    h_segments = [segment for _, segment in horiz_pairs]
-
-    v_clusters = cluster_segments(v_centers, v_segments)
-    h_clusters = cluster_segments(h_centers, h_segments)
+    v_clusters = cluster_segments(raw_vert)
+    h_clusters = cluster_segments(raw_horiz)
 
     if len(h_clusters) < 2 or len(v_clusters) < 2:
         return None
