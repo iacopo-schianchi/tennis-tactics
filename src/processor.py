@@ -71,6 +71,8 @@ class VideoProcessor:
         
         cap.release()
 
+        self._run_annotation(video_path)
+
     def _run_annotation(self, video_path):
         annotator = VideoAnnotator(self.context)
         annotator.render(video_path)
