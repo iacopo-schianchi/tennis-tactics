@@ -18,10 +18,12 @@ class MetricAnnotator:
         y = 30
 
         for hit_context in past_hit_context:
-            shot_type = hit_context['shot_type'].name
+            shot_type = hit_context['shot_type']
+            shot_name = 'Unnknown'
+            if shot_type is None: shot_name = shot_type.name
             peak = hit_context['peak']
             speed = hit_context['speed']
-            hit_text = f'{shot_type} (~{speed} km/h, ~{peak}m peak)'
+            hit_text = f'{shot_name} (~{speed} km/h, ~{peak}m peak)'
 
             cv2.putText(
                 frame,
