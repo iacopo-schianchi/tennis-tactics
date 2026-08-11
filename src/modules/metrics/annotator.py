@@ -20,7 +20,7 @@ class MetricAnnotator:
         for hit_context in past_hit_context:
             shot_type = hit_context['shot_type']
             shot_name = 'Unnknown'
-            if shot_type is None: shot_name = shot_type.name
+            if shot_type is not None: shot_name = shot_type.name
             peak = hit_context['peak']
             speed = hit_context['speed']
             hit_text = f'{shot_name} (~{speed} km/h, ~{peak}m peak)'
