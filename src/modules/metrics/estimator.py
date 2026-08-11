@@ -157,7 +157,9 @@ class ShotMetricEstimator:
                     if candidate_x is not None and candidate_y is not None:
                         return ball
 
-        return None
+        print(context[max(0, frame_id - SHOT_TYPE_COORD_FRAME_PAD):min(self.processor.total_frames-1, frame_id + SHOT_TYPE_COORD_FRAME_PAD)])
+
+        return {'x_px': None, 'y_px': None}
 
     # returns nearest_player, is_far
     def _get_nearest_player(self, player_boxes, bx, by):
