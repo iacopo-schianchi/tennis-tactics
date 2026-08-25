@@ -137,27 +137,22 @@ class ShotMetricEstimator:
         return None, None
 
     def _get_near_ball(self, frame_id, context):
-        bx, by = context[frame_id]['ball']['x_px'], context[frame_id]['ball']['y_px']
+        ball = context[frame_id].get('ball', {})
+        bx = ball.get('x_px')
+        by = ball.get('y_px')
 
-        if bx is None or by is None:
-            for offset in range(1, SHOT_TYPE_COORD_FRAME_PAD + 1):
-                candidates = []
+        if bx is not None and by is not None:
+            return ball
 
-                if frame_id - offset >= 0:
-                    candidates.append(frame_id - offset)
-
-                if frame_id + offset < self.processor.total_frames:
-                    candidates.append(frame_id + offset)
-
-                for idx in candidates:
-                    ball = context[idx].get('ball', {})
-                    candidate_x = ball.get('x_px')
-                    candidate_y = ball.get('y_px')
-
-                    if candidate_x is not None and candidate_y is not None:
-                        return ball
-
-        print(context[max(0, frame_id - SHOT_TYPE_COORD_FRAME_PAD):min(self.processor.total_frames-1, frame_id + SHOT_TYPE_COORD_FRAME_PAD)])
+        for offset in range(1, SHOT_TYPE_COORD_FRAME_PAD + 1):
+            for idx in (frame_id - offset, frame_id + offset):
+                if 0 <= idx < self.processor.total_frames:
+                    candidate = context[idx].get('ball', {})
+                    if (
+                        candidate.get('x_px') is not None
+                        and candidate.get('y_px') is not None
+                    ):
+                        return candidate
 
         return {'x_px': None, 'y_px': None}
 
