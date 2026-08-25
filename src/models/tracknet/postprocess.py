@@ -3,7 +3,7 @@
 import cv2
 import numpy as np
 
-def postprocess(feature_map, scale=2):
+def postprocess(feature_map):
     feature_map *= 255
     feature_map = feature_map.reshape((360, 640))
     feature_map = feature_map.astype(np.uint8)
@@ -13,6 +13,6 @@ def postprocess(feature_map, scale=2):
     x,y = None, None
     if circles is not None:
         if len(circles) == 1:
-            x = circles[0][0][0]*scale
-            y = circles[0][0][1]*scale
+            x = circles[0][0][0]
+            y = circles[0][0][1]
     return x, y
