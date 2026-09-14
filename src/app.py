@@ -66,5 +66,7 @@ if __name__ == "__main__":
         "handedness": args.near_handedness,
     }
 
+    context = None if args.context == 'None' else args.context
+
     vp = VideoProcessor(far_player, near_player, FPS)
-    vp.process(args.video, context_path=args.context, start_pass=args.start_pass, persist=args.persist)
+    vp.process(args.video, context_path=context, start_pass=args.start_pass, persist=args.persist)
