@@ -217,13 +217,16 @@ class ShotMetricEstimator:
         self.processor.set_context(i, {**context[i], 'peak': peak, 'speed': speed_kmh})
 
     def _estimate_peak(self, T, h0, h1):
-        v_y0 = (h1 - h0 + 0.5 * g * T ** 2) / T
+        v_y0 = self._estimate_v_y0_linear_drag(h0, h1, T)
         t_up = v_y0 / g
 
         if v_y0 <= 0:
             return max(h0, h1)
         
         return h0 + 0.5 * g * t_up ** 2
+
+    def _estimate_v_y0_linear_drag(self, h0, h1, T, k=0.25):
+        return (h1 - h0 + (g/k) * T) * k / (1 - math.exp(-k*T)) - g/k
 
     def _estimate_v_x0_linear_drag(self, d, T, k=0.25):
         if k == 0:
@@ -237,7 +240,7 @@ class ShotMetricEstimator:
 
         d = np.sqrt((last_x - curr_x) ** 2 + (last_y - curr_y) ** 2)
 
-        v_y0 = (h1 - h0 + 0.5 * g * T ** 2) / T
+        v_y0 = self._estimate_v_y0_linear_drag(h0, h1, T)
         v_x0 = self._estimate_v_x0_linear_drag(d, T)
 
         v = math.sqrt(v_x0**2 + v_y0**2)
