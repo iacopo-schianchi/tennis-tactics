@@ -38,5 +38,8 @@ def parse_args():
 if __name__ == "__main__":
     args = parse_args()
 
-    vp = VideoProcessor(args.far_id, args.near_id, FPS)
+    far_id = args.far_id or str(uuid4())
+    near_id = args.near_id or str(uuid4())
+
+    vp = VideoProcessor(far_id, near_id, FPS)
     vp.process(args.video, context_path=args.context, start_pass=args.start_pass, persist=args.persist)
