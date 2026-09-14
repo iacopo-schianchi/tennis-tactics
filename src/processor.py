@@ -69,11 +69,7 @@ class VideoProcessor:
                 if len(frames) > window_size:
                     frames.pop(0)
                 
-                frame_data = self._run_perception(frames, frame_id, modules)
-                if i == 0:
-                    self.context.append(frame_data)
-                else:
-                    self.context[frame_id].update(frame_data)
+                self._run_perception(frames, frame_id, modules)
 
                 if frame_id % 10 == 0:
                     print(f"Processed {frame_id}/{self.total_frames} frames")
@@ -96,7 +92,7 @@ class VideoProcessor:
             result = module.process(frames, frame_id, self.context)
             self.context[frame_id].update(result)
 
-        return self.context[frame_id]
+        # return self.context[frame_id]
     
     def set_context(self, frame_id, context):
         if 0 <= frame_id < len(self.context): self.context[frame_id] = context
