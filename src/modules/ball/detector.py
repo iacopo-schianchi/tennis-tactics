@@ -24,9 +24,6 @@ class BallDetector:
         self.processor = processor
         self.fps = fps
 
-    def wrap_angle(self, a):
-        return ((a + np.pi) % (2 * np.pi)) - np.pi
-
     def image_to_court(self, x, y, H):
         if x is None or y is None or H is None:
             return None, None
@@ -36,34 +33,6 @@ class BallDetector:
         court_pt = cv2.perspectiveTransform(pt, H)[0, 0]
 
         return float(court_pt[0]), float(court_pt[1])
-
-    def set_last_accel(self, frame_id, context, vx, vy):
-        # last frame
-        if frame_id + 1 == self.processor.total_frames:
-            prev = context[frame_id - 1]['ball']
-            if prev['vx'] is not None and prev['vy'] is not None:
-                ax = (vx - prev['vx']) * self.fps
-                ay = (vy - prev['vy']) * self.fps
-            else:
-                ax, ay = 0.0, 0.0
-        else:
-            prev2 = context[frame_id - 2]['ball']
-            if prev2['vx'] is not None and prev2['vy'] is not None:
-                ax = (vx - prev2['vx']) * self.fps / 2
-                ay = (vy - prev2['vy']) * self.fps / 2
-            else:
-                ax, ay = 0.0, 0.0
-
-        accel = np.sqrt(ax ** 2 + ay ** 2)
-        self.processor.set_context(frame_id - 1, {
-            **context[frame_id - 1],
-            "ball": {
-                **context[frame_id - 1]['ball'],
-                "ax": ax,
-                "ay": ay,
-                "accel": accel
-            }
-        })
 
     def process(self, frames, frame_id, context):
         x_px, y_px = None, None
@@ -75,48 +44,13 @@ class BallDetector:
             H = context[frame_id].get("court").get('H')
             x, y = self.image_to_court(x_px, y_px, H)
 
-        vx, vy = 0, 0 # TODO: change to centered derivative instead
-        if frame_id > 2:
-            prev = context[frame_id - 1]['ball']
-            if x is not None and prev['x'] is not None:
-                vx = (x - prev['x']) * self.fps
-                vy = (y - prev['y']) * self.fps
-
-        if frame_id >= 4:
-            self.set_last_accel(frame_id, context, vx, vy)
-
-        speed = np.sqrt(vx ** 2 + vy ** 2)
-
-        if frame_id <= 2:
-            angle = 0.0
-        elif speed < 0.1:
-            angle = context[frame_id-1]["ball"]["angle"]
-        else:
-            angle = np.arctan2(vy, vx)
-
-        if frame_id <= 2:
-            delta_angle = 0.0
-        else:
-            raw_delta = angle - context[frame_id - 1]["ball"]['angle']
-            delta_angle = self.wrap_angle(raw_delta) * self.fps
-
         return {
             "ball": {
                 'is_missing': x is None or y is None,
                 'x': x,
                 'y': y,
                 'x_px': x_px,
-                'y_px': y_px,
-                'vx': vx,
-                'vy': vy,
-                'angle': angle,
-                'delta_angle': delta_angle,
-                'speed': speed,
-
-                # set in next frame
-                'ax': 0.0,
-                'ay': 0.0,
-                'accel': 0.0
+                'y_px': y_px
             }
         }
 

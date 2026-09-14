@@ -8,7 +8,7 @@ class BallAnnotator():
 
     def draw(self, frame, frame_id, context):
         start_i = max(0, frame_id - self.BALL_TRAIL_FRAMES)
-        trail_context = context[start_i:frame_id]
+        trail_context = context[start_i:frame_id + 1]
 
         last_hit_frame = None
         prev_point = None
