@@ -205,12 +205,13 @@ class ShotMetricEstimator:
         if event_type == 'hit':
             curr_is_hit = context[frame_id]['event']['is_hit']
 
-            ball = self._get_near_ball(frame_id, context) # TODO: guard against None ball
+            ball = self._get_near_ball(frame_id, context)
+            last_ball = self._get_near_ball(i, context) # TODO: guard against None ball
 
             curr_nearest_player, _ = self._get_nearest_player(context[frame_id]['players'], ball['x_px'], ball['y_px'])
             curr_court_coords = curr_nearest_player['feet_m'] if curr_is_hit else (ball['x'], ball['y'])
 
-            speed = self._estimate_speed(last_context, curr_court_coords, T, h0, h1, ball)
+            speed = self._estimate_speed(last_context, curr_court_coords, T, h0, h1, last_ball)
             speed_kmh = speed * 3.6
 
         self.processor.set_context(i, {**context[i], 'peak': peak, 'speed': speed_kmh})
@@ -218,6 +219,10 @@ class ShotMetricEstimator:
     def _estimate_peak(self, T, h0, h1):
         v_y0 = (h1 - h0 + 0.5 * g * T ** 2) / T
         t_up = v_y0 / g
+
+        if v_y0 <= 0:
+            return max(h0, h1)
+        
         return h0 + 0.5 * g * t_up ** 2
 
     def _estimate_v_x0_linear_drag(self, d, T, k=0.25):

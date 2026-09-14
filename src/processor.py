@@ -6,6 +6,7 @@ from modules.ball.kinematics import BallKinematics
 from modules.events.detector import EventDetector
 from modules.metrics.estimator import ShotMetricEstimator
 from annotator import VideoAnnotator
+import json
 
 class VideoProcessor:
     def __init__(self, far_player_id, near_player_id, fps = 30):
@@ -36,14 +37,22 @@ class VideoProcessor:
             ),
         ]
     
-    def process(self, video_path):
+    def process(self, video_path, context_path=None, start_pass=0):
         print("Processing video...")
         
         cap = cv2.VideoCapture(video_path)
         self.total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         cap.release()
+        
+        if context_path:
+            with open(context_path) as f:
+                self.context = json.load(f)
+            assert len(self.context) == self.total_frames, "Loaded context length doesn't match video frame count"
+
+        pass_start_idx = len(self.passes) if start_pass == 'full' else start_pass
 
         for i, modules in enumerate(self.passes):
+            if i < pass_start_idx: continue
             print(f"Pass {i+1}")
 
             cap = cv2.VideoCapture(video_path)
