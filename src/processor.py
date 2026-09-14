@@ -47,7 +47,7 @@ class VideoProcessor:
         if context_path:
             with open(context_path) as f:
                 self.context = json.load(f)
-            assert len(self.context) == self.total_frames, "Loaded context length doesn't match video frame count"
+            assert len(self.context) == self.total_frames, f"Loaded context length doesn't match video frame count ({self.total_frames} frames, {len(self.context)} context)"
 
         pass_start_idx = len(self.passes) if start_pass == 'full' else start_pass
 
