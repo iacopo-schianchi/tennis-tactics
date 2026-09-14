@@ -9,6 +9,7 @@ from persister import Persister
 from db.repository import MatchRepository
 from annotator import VideoAnnotator
 import json
+import time
 
 class VideoProcessor:
     def __init__(self, far_player, near_player, fps=30):
@@ -41,6 +42,7 @@ class VideoProcessor:
     
     def process(self, video_path, context_path=None, start_pass=0, persist=True):
         print("Processing video...")
+        self.module_timing = {}
         
         cap = cv2.VideoCapture(video_path)
         self.total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -105,8 +107,25 @@ class VideoProcessor:
             self.context.append({})
 
         for module in modules:
+            module_name = module.__class__.__name__
+            started_at = time.perf_counter()
             result = module.process(frames, frame_id, self.context)
+            elapsed = time.perf_counter() - started_at
             self.context[frame_id].update(result)
+
+            timing = self.module_timing.setdefault(
+                module_name,
+                {'total_seconds': 0.0, 'frames': 0},
+            )
+            timing['total_seconds'] += elapsed
+            timing['frames'] += 1
+
+        if (frame_id + 1) % 10 == 0:
+            averages = ', '.join(
+                f"{module_name}: {timing['total_seconds'] / timing['frames']:.4f}s"
+                for module_name, timing in self.module_timing.items()
+            )
+            print(f"Running module averages after {frame_id + 1} frames: {averages}")
 
         # return self.context[frame_id]
     
