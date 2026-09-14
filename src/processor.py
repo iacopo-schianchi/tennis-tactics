@@ -25,7 +25,7 @@ class VideoProcessor:
                 BallDetector(self, fps),
             ),
             (
-                BallKinematics(),
+                BallKinematics(self, fps),
             ),
             (
                 EventDetector(),
