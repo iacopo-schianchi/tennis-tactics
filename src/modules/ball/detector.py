@@ -13,8 +13,11 @@ MODEL_WEIGHTS_PATH = (
     / "tracknet.pt"
 )
 
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 trackernet_model = BallTrackerNet()
-trackernet_model.load_state_dict(torch.load(MODEL_WEIGHTS_PATH))
+trackernet_model.load_state_dict(torch.load(MODEL_WEIGHTS_PATH, map_location=DEVICE))
+trackernet_model.to(DEVICE)
 trackernet_model.eval()
 
 class BallDetector:
@@ -67,8 +70,8 @@ class BallDetector:
         x = np.transpose(x, (2, 0, 1))
         x = np.expand_dims(x, axis=0)
 
-        with torch.no_grad():
-            output = trackernet_model(torch.from_numpy(x))
+        with torch.inference_mode():
+            output = trackernet_model(torch.from_numpy(x).to(DEVICE))
 
         heatmap = output.argmax(dim=1).squeeze().cpu().numpy()
         x_pred, y_pred = postprocess(heatmap)
