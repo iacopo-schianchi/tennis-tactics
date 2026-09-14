@@ -18,7 +18,10 @@ class Persister:
         if not isinstance(sets_per_match, int) or sets_per_match < 1:
             raise ValueError('sets_per_match must be a positive integer')
 
-        self.players = players
+        self.players = {
+            role: player
+            for role, player in players.items()
+        }
         self.games_per_set = games_per_set
         self.sets_per_match = sets_per_match
 

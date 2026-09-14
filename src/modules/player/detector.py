@@ -58,7 +58,7 @@ class PlayerDetector:
             pct, bev = self._pixel_to_court(feet_x_px, feet_y_px, H)
 
         return {
-            "id": self.player_map.get(role),
+            "id": self.player_map.get(role, {}).get("id"),
             "bbox": [int(x1), int(y1), int(x2), int(y2)],
             "feet_px": [int(feet_x_px), int(feet_y_px)], # coords in image pixel coordinates
             "feet_m": bev, # coords in meters on court suface

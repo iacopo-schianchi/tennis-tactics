@@ -33,6 +33,20 @@ def parse_args():
     )
     parser.add_argument("--far-id", type=uuid_type, default=None, help="UUID of far player")
     parser.add_argument("--near-id", type=uuid_type, default=None, help="UUID of near player")
+    parser.add_argument("--far-name", default="Far Player", help="Name of far player")
+    parser.add_argument("--near-name", default="Near Player", help="Name of near player")
+    parser.add_argument(
+        "--far-handedness",
+        choices=("right", "left"),
+        default=None,
+        help="Handedness of far player",
+    )
+    parser.add_argument(
+        "--near-handedness",
+        choices=("right", "left"),
+        default=None,
+        help="Handedness of near player",
+    )
     return parser.parse_args()
 
 if __name__ == "__main__":
@@ -41,5 +55,16 @@ if __name__ == "__main__":
     far_id = args.far_id or str(uuid4())
     near_id = args.near_id or str(uuid4())
 
-    vp = VideoProcessor(far_id, near_id, FPS)
+    far_player = {
+        "id": far_id,
+        "name": args.far_name,
+        "handedness": args.far_handedness,
+    }
+    near_player = {
+        "id": near_id,
+        "name": args.near_name,
+        "handedness": args.near_handedness,
+    }
+
+    vp = VideoProcessor(far_player, near_player, FPS)
     vp.process(args.video, context_path=args.context, start_pass=args.start_pass, persist=args.persist)

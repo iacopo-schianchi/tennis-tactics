@@ -11,13 +11,13 @@ from annotator import VideoAnnotator
 import json
 
 class VideoProcessor:
-    def __init__(self, far_player_id, near_player_id, fps = 30):
+    def __init__(self, far_player, near_player, fps=30):
         self.context = []
         self.fps = fps
 
         self.player_map = {
-            'near': near_player_id,
-            'far': far_player_id
+            'near': near_player,
+            'far': far_player
         }
 
         # each pass processes frames -> updates context
