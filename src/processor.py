@@ -5,6 +5,8 @@ from modules.ball.detector import BallDetector
 from modules.ball.kinematics import BallKinematics
 from modules.events.detector import EventDetector
 from modules.metrics.estimator import ShotMetricEstimator
+from persister import Persister
+from db.repository import MatchRepository
 from annotator import VideoAnnotator
 import json
 
@@ -37,7 +39,7 @@ class VideoProcessor:
             ),
         ]
     
-    def process(self, video_path, context_path=None, start_pass=0):
+    def process(self, video_path, context_path=None, start_pass=0, persist=True):
         print("Processing video...")
         
         cap = cv2.VideoCapture(video_path)
@@ -88,6 +90,11 @@ class VideoProcessor:
             cap.release()
 
         self._run_annotation(video_path)
+        if persist: self._persist_stats()
+
+    def _persist_stats(self):
+        persisted = Persister(self.player_map).persist(self.context)
+        MatchRepository().save(persisted)
 
     def _run_annotation(self, video_path):
         annotator = VideoAnnotator(self.context, self.fps)

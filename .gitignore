@@ -1,7 +1,7 @@
 /assets
 /data
 .venv
-
+.env
 
 src/**/*.pt
 __pycache__/
