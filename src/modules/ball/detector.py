@@ -20,12 +20,16 @@ trackernet_model.load_state_dict(torch.load(MODEL_WEIGHTS_PATH, map_location=DEV
 trackernet_model.to(DEVICE)
 trackernet_model.eval()
 
+BATCH_SIZE = 16
+
 class BallDetector:
     window_size = 3
 
     def __init__(self, processor, fps):
         self.processor = processor
         self.fps = fps
+        self.batch_inputs = []
+        self.batch_frame_ids = []
 
     def image_to_court(self, x, y, H):
         if x is None or y is None or H is None:
@@ -38,28 +42,26 @@ class BallDetector:
         return float(court_pt[0]), float(court_pt[1])
 
     def process(self, frames, frame_id, context):
-        x_px, y_px = None, None
         if frame_id >= 2:
-            x_px, y_px = self.detect_ball(frames)
+            self._queue_window(frames, frame_id)
 
-        x, y = None, None
-        if x_px is not None and y_px is not None:
-            H = context[frame_id].get("court").get('H')
-            x, y = self.image_to_court(x_px, y_px, H)
+            is_last = frame_id + 1 == self.processor.total_frames
+            if len(self.batch_inputs) >= BATCH_SIZE or is_last:
+                self._detect_ball_batched(context)
 
         return {
             "ball": {
-                'is_missing': x is None or y is None,
-                'x': x,
-                'y': y,
-                'x_px': x_px,
-                'y_px': y_px
+                'is_missing': True,
+                'x': None,
+                'y': None,
+                'x_px': None,
+                'y_px': None
             }
         }
 
-    def detect_ball(self, frames):
+    def _queue_window(self, frames, frame_id):
         orig_h, orig_w, _ = frames[0].shape
-        H, W = 360, 640
+        W, H = 640, 360
 
         img = cv2.resize(frames[2], (W, H))
         img_prev = cv2.resize(frames[1], (W, H))
@@ -68,16 +70,44 @@ class BallDetector:
         x = np.concatenate((img_preprev, img_prev, img), axis=2)
         x = x.astype(np.float32) / 255.0
         x = np.transpose(x, (2, 0, 1))
-        x = np.expand_dims(x, axis=0)
+
+        self.batch_inputs.append(x)
+        self.batch_frame_ids.append((frame_id, orig_w, orig_h))
+
+    def _detect_ball_batched(self, context):
+        if not self.batch_inputs:
+            return
+
+        W, H = 640, 360
+        batch = np.stack(self.batch_inputs, axis=0)
 
         with torch.inference_mode():
-            output = trackernet_model(torch.from_numpy(x).to(DEVICE))
+            output = trackernet_model(torch.from_numpy(batch).to(DEVICE))
 
-        heatmap = output.argmax(dim=1).squeeze().cpu().numpy()
-        x_pred, y_pred = postprocess(heatmap)
+        heatmaps = output.argmax(dim=1).cpu().numpy()
 
-        if x_pred is not None and y_pred is not None:
-            x_pred = x_pred * (orig_w / W)
-            y_pred = y_pred * (orig_h / H)
+        for heatmap, (frame_id, orig_w, orig_h) in zip(heatmaps, self.batch_frame_ids):
+            x_pred, y_pred = postprocess(heatmap)
 
-        return x_pred, y_pred
+            if x_pred is not None and y_pred is not None:
+                x_pred = x_pred * (orig_w / W)
+                y_pred = y_pred * (orig_h / H)
+
+            court_x, court_y = None, None
+            court_H = context[frame_id].get("court", {}).get('H')
+            if x_pred is not None and y_pred is not None:
+                court_x, court_y = self.image_to_court(x_pred, y_pred, court_H)
+
+            self.processor.set_context(frame_id, {
+                **context[frame_id],
+                "ball": {
+                    'is_missing': court_x is None or court_y is None,
+                    'x': court_x,
+                    'y': court_y,
+                    'x_px': x_pred,
+                    'y_px': y_pred
+                }
+            })
+
+        self.batch_inputs.clear()
+        self.batch_frame_ids.clear()
