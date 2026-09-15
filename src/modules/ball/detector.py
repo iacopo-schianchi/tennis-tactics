@@ -20,7 +20,7 @@ trackernet_model.load_state_dict(torch.load(MODEL_WEIGHTS_PATH, map_location=DEV
 trackernet_model.to(DEVICE)
 trackernet_model.eval()
 
-BATCH_SIZE = 32
+BATCH_SIZE = 20
 
 class BallDetector:
     window_size = 3
