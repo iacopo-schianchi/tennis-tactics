@@ -144,9 +144,7 @@ def show_detection_debug(
             axes[2, 1].plot(
                 [xa, xb],
                 [ya, yb],
-                linewidth=1,
-                marker="o",
-                markersize=2
+                linewidth=3
             )
 
     axes[2, 1].set_title("Fitted boundary lines")
@@ -164,13 +162,13 @@ def show_detection_debug(
         axes[0, 2].plot(
             xs + [xs[0]],
             ys + [ys[0]],
-            linewidth=3
+            linewidth=1
         )
 
         axes[0, 2].scatter(
             xs,
             ys,
-            s=80
+            s=14
         )
 
         for i, (x, y) in enumerate(corners):
