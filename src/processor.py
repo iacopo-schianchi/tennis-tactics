@@ -10,26 +10,28 @@ from db.repository import MatchRepository
 from annotator import VideoAnnotator
 import json
 import time
+import math
 
 class VideoProcessor:
-    def __init__(self, far_player, near_player, fps=30):
+    def __init__(self, far_player, near_player, target_fps=30):
         self.context = []
-        self.fps = fps
+        self.target_fps = target_fps
 
         self.player_map = {
             'near': near_player,
             'far': far_player
         }
 
+    def _build_passes(self):
         # each pass processes frames -> updates context
         self.passes = [
             (
                 CourtDetector(),
                 PlayerDetector(self.player_map),
-                BallDetector(self, fps),
+                BallDetector(self, self.fps),
             ),
             (
-                BallKinematics(self, fps),
+                BallKinematics(self, self.fps),
             ),
             (
                 EventDetector(),
@@ -39,14 +41,31 @@ class VideoProcessor:
                 ShotMetricEstimator(self),
             ),
         ]
-    
+
+    def _configure_sampling(self, video_path):
+        cap = cv2.VideoCapture(video_path)
+        self.source_fps = cap.get(cv2.CAP_PROP_FPS)
+        self.source_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        cap.release()
+
+        exact_ratio = self.source_fps / self.target_fps
+        stride_options = {max(1, math.floor(exact_ratio)), max(1, math.ceil(exact_ratio))}
+
+        best_stride = min(
+            stride_options,
+            key=lambda stride: abs(self.source_fps / stride - self.target_fps),
+        )
+
+        self.stride = best_stride
+        self.fps = self.source_fps / best_stride
+        self.total_frames = math.ceil(self.source_frames / self.stride)
+
     def process(self, video_path, context_path=None, start_pass=0, persist=True):
         print("Processing video...")
         self.module_timing = {}
         
-        cap = cv2.VideoCapture(video_path)
-        self.total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-        cap.release()
+        self._configure_sampling(video_path)
+        self._build_passes()
         
         if context_path:
             with open(context_path) as f:
@@ -63,10 +82,10 @@ class VideoProcessor:
             print("Video path:", video_path)
             print("Capture opened:", cap.isOpened())
             print("Frame count:", cap.get(cv2.CAP_PROP_FRAME_COUNT))
-            print("FPS:", cap.get(cv2.CAP_PROP_FPS))
+            print("Source FPS:", cap.get(cv2.CAP_PROP_FPS))
+            print("Target FPS:", self.target_fps)
 
             frames = []
-            frame_id = 0
 
             window_size = max(
                 module.window_size if hasattr(module, "window_size") else 1 for module in modules
@@ -74,20 +93,23 @@ class VideoProcessor:
 
             # TODO: only read frames for passes that need it
 
+            raw_idx = 0
+            frame_id = 0
             while cap.isOpened():
-                ret, frame = cap.read()
-                if not ret:
+                if not cap.grab():
                     break
-                frames.append(frame)
-                if len(frames) > window_size:
-                    frames.pop(0)
-                
-                self._run_perception(frames, frame_id, modules)
-
-                if frame_id % 10 == 0:
-                    print(f"Processed {frame_id}/{self.total_frames} frames")
-                
-                frame_id += 1
+                if raw_idx % self.stride == 0:
+                    ret, frame = cap.retrieve()
+                    if not ret:
+                        break
+                    frames.append(frame)
+                    if len(frames) > window_size:
+                        frames.pop(0)
+                    self._run_perception(frames, frame_id, modules)
+                    if frame_id % 10 == 0:
+                        print(f"Processed {frame_id}/{self.total_frames} frames")
+                    frame_id += 1
+                raw_idx += 1
         
             cap.release()
 
@@ -99,7 +121,7 @@ class VideoProcessor:
         MatchRepository().save(persisted)
 
     def _run_annotation(self, video_path):
-        annotator = VideoAnnotator(self.context, self.fps)
+        annotator = VideoAnnotator(self.context, self.fps, self.stride)
         annotator.render(video_path)
 
     def _run_perception(self, frames, frame_id, modules):

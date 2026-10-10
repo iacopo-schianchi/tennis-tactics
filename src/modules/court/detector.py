@@ -8,9 +8,6 @@ from .debug import show_detection_debug
 from utils.consts import COURT_LENGTH, COURT_WIDTH
 import torch
 
-LOWER = np.array([110] * 3)
-UPPER = np.array([255] * 3)
-
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 predictor = load_sam_model(DEVICE)
 
@@ -34,6 +31,21 @@ class CourtDetector:
             }
         }
 
+    def get_line_mask(self, img, mask):
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+        inside = mask > 0
+
+        k = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (13, 13))
+        tophat = cv2.morphologyEx(gray, cv2.MORPH_TOPHAT, k)
+
+        t, _ = cv2.threshold(tophat[inside].reshape(-1, 1), 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        t = max(t, 15)
+
+        floor = np.median(gray[inside]) + 20
+        out = (tophat > t) & (hsv[..., 1] < 70) & (gray > floor) & inside
+        return out.astype(np.uint8) * 255
+
     def detect_court(self, frame, debug = False):
         image_np = np.array(frame)
 
@@ -42,7 +54,7 @@ class CourtDetector:
         mask = get_convex_hull_mask(raw_mask)
 
         isolated_court = cv2.bitwise_and(image_np, image_np, mask=mask)
-        raw_line_mask = cv2.inRange(isolated_court, LOWER, UPPER)
+        raw_line_mask = self.get_line_mask(isolated_court, mask)
 
         line_mask = self.filter_mask(raw_line_mask)
         lines = get_lines(line_mask)

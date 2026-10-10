@@ -28,7 +28,7 @@ def json_default(obj):
     raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
 
 class VideoAnnotator:
-    def __init__(self, context, fps=30):
+    def __init__(self, context, fps=30, stride=1):
         self.context = context
         self.annotators = [
             CourtAnnotator(),
@@ -37,6 +37,7 @@ class VideoAnnotator:
             PlayerAnnotator(),
         ]
         self.fps = fps
+        self.stride = stride
 
         OUTPUT_DIR = Path("/content/tennis-tactics/assets/Demos")
         OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -63,17 +64,22 @@ class VideoAnnotator:
         fourcc = cv2.VideoWriter_fourcc(*"mp4v")
         writer = cv2.VideoWriter(self.OUTPUT_PATH, fourcc, self.fps, (w, h))
 
+        raw_idx = 0
         frame_id = 0
         while cap.isOpened():
-            ret, frame = cap.read()
-            if not ret:
+            if not cap.grab():
                 break
-
-            for annotator in self.annotators:
-                frame = annotator.draw(frame, frame_id, self.context)
-
-            writer.write(frame)
-            frame_id += 1
-
+            if raw_idx % self.stride == 0:
+                ret, frame = cap.retrieve()
+                if not ret:
+                    break
+                for annotator in self.annotators:
+                    frame = annotator.draw(frame, frame_id, self.context)
+                writer.write(frame)
+                frame_id += 1
+            raw_idx += 1
+            if frame_id >= len(self.context):
+                break
+            
         cap.release()
         writer.release()
