@@ -1,5 +1,9 @@
 import cv2
 import numpy as np
+from utils.consts import COURT_LENGTH, COURT_WIDTH
+
+SECOND_LINE_DEPTH_FT = 60
+DOUBLES_LENGTH_FT = 78
 
 CANNY_THRESHOLD1 = 20
 CANNY_THRESHOLD2 = 80
@@ -9,8 +13,8 @@ MIN_LINE_LENGTH = 100
 MAX_LINE_GAP = 120
 
 HORIZ_ANGLE_THRESH = 25
-VERT_ANGLE_THRESH = 60
-MIN_WIDTH_FRACTION = 0.22
+VERT_ANGLE_THRESH = 75
+MIN_WIDTH_FRACTION = 0.18 # was 0.22
 MIN_HEIGHT_FRACTION = 0.4
 
 LINE_CLUSTER_THERSH = 25
@@ -167,7 +171,7 @@ def get_boundary_lines(h_clusters, v_clusters, img_w, img_h):
     center_y = img_h / 2
 
     h_positions = [(y_at_x(line, center_x), line) for line in h_lines]
-    v_positions = [(x_at_y(line, center_y), line)for line in v_lines]
+    v_positions = [(x_at_y(line, center_y), line) for line in v_lines]
 
     h_positions = [(pos, line) for pos, line in h_positions if pos is not None]
     v_positions = [(pos, line) for pos, line in v_positions if pos is not None]
@@ -175,26 +179,53 @@ def get_boundary_lines(h_clusters, v_clusters, img_w, img_h):
     if len(h_positions) < 2 or len(v_positions) < 2:
         return None
 
-    top_line = min(h_positions, key=lambda x: x[0])[1]
-    bottom_line = max(h_positions, key=lambda x: x[0])[1]
+    h_positions.sort(key=lambda x: x[0], reverse=True)
+    (_, near_line), (_, second_line) = h_positions[0], h_positions[1]
 
     left_line = min(v_positions, key=lambda x: x[0])[1]
     right_line = max(v_positions, key=lambda x: x[0])[1]
 
-    return top_line, bottom_line, left_line, right_line
+    return near_line, second_line, left_line, right_line
 
 def get_corners(raw_vert, raw_horiz, img_w, img_h):
     v_clusters = cluster_segments(raw_vert)
     h_clusters = cluster_segments(raw_horiz)
 
-    top_line, bottom_line, left_line, right_line = get_boundary_lines(h_clusters, v_clusters, img_w, img_h)
+    boundary = get_boundary_lines(h_clusters, v_clusters, img_w, img_h)
+    if boundary is None:
+        return None
+    near_line, second_line, left_line, right_line = boundary
 
-    tl = find_infinite_line_intersection(top_line, left_line)
-    tr = find_infinite_line_intersection(top_line, right_line)
-    br = find_infinite_line_intersection(bottom_line, right_line)
-    bl = find_infinite_line_intersection(bottom_line, left_line)
+    bl = find_infinite_line_intersection(near_line, left_line)
+    br = find_infinite_line_intersection(near_line, right_line)
+    l2 = find_infinite_line_intersection(second_line, left_line)
+    r2 = find_infinite_line_intersection(second_line, right_line)
 
-    if None in (tl, tr, br, bl):
+    if None in (bl, br, l2, r2):
         return None
 
-    return [tl, tr, br, bl]
+    second_y = COURT_LENGTH * (1 - SECOND_LINE_DEPTH_FT / DOUBLES_LENGTH_FT)
+
+    img_pts = np.array([bl, br, r2, l2], dtype=np.float32)
+    court_pts = np.array(
+        [
+            [0, COURT_LENGTH],
+            [COURT_WIDTH, COURT_LENGTH],
+            [COURT_WIDTH, second_y],
+            [0, second_y],
+        ],
+        dtype=np.float32,
+    )
+
+    # project near intersections to full court
+    H, _ = cv2.findHomography(court_pts, img_pts)
+    if H is None:
+        return None
+
+    full_court = np.array(
+        [[[0, 0]], [[COURT_WIDTH, 0]], [[COURT_WIDTH, COURT_LENGTH]], [[0, COURT_LENGTH]]],
+        dtype=np.float32,
+    )
+    projected = cv2.perspectiveTransform(full_court, H).reshape(-1, 2)
+
+    return [(round(x), round(y)) for x, y in projected]
