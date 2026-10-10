@@ -144,7 +144,9 @@ def show_detection_debug(
             axes[2, 1].plot(
                 [xa, xb],
                 [ya, yb],
-                linewidth=3
+                linewidth=1,
+                marker="o",
+                markersize=2
             )
 
     axes[2, 1].set_title("Fitted boundary lines")
