@@ -208,17 +208,17 @@ def get_corners(raw_vert, raw_horiz, img_w, img_h):
 
     image_points = np.asarray(image_corners, dtype=np.float32)
 
-    full_court = np.asarray(
+    court_pts = np.asarray(
         [
-            [[0, COURT_LENGTH]],
-            [[COURT_WIDTH, COURT_LENGTH]],
-            [[COURT_WIDTH, 0]],
-            [[0, 0]],
+            [0, 0],
+            [COURT_WIDTH, 0],
+            [COURT_WIDTH, SERVICE_LINE_OFFSET_FT],
+            [0, SERVICE_LINE_OFFSET_FT],
         ],
         dtype=np.float32,
     )
 
-    H = cv2.getPerspectiveTransform(full_court, image_points)
+    H = cv2.getPerspectiveTransform(court_pts, image_points)
     if H is None:
         return None
 
