@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 from utils.consts import COURT_LENGTH, COURT_WIDTH
 
-SECOND_LINE_DEPTH_FT = 60
+SERVICE_LINE_OFFSET_FT = 18.0 # from near baseline
 
 CANNY_THRESHOLD1 = 20
 CANNY_THRESHOLD2 = 80
@@ -141,7 +141,7 @@ def find_infinite_line_intersection(line1, line2):
     x = x1 + t * vx1
     y = y1 + t * vy1
 
-    return (round(x), round(y))
+    return (x, y)
 
 def y_at_x(line, x):
     vx, vy, x0, y0 = line
@@ -186,6 +186,7 @@ def get_boundary_lines(h_clusters, v_clusters, img_w, img_h):
 
     return near_line, second_line, left_line, right_line
 
+# estimate all corners using near baseline and service line
 def get_corners(raw_vert, raw_horiz, img_w, img_h):
     v_clusters = cluster_segments(raw_vert)
     h_clusters = cluster_segments(raw_horiz)
@@ -193,31 +194,31 @@ def get_corners(raw_vert, raw_horiz, img_w, img_h):
     boundary = get_boundary_lines(h_clusters, v_clusters, img_w, img_h)
     if boundary is None:
         return None
-    near_line, second_line, left_line, right_line = boundary
+    near_line, service_line, left_line, right_line = boundary
 
     bl = find_infinite_line_intersection(near_line, left_line)
     br = find_infinite_line_intersection(near_line, right_line)
-    l2 = find_infinite_line_intersection(second_line, left_line)
-    r2 = find_infinite_line_intersection(second_line, right_line)
+    l2 = find_infinite_line_intersection(service_line, left_line)
+    r2 = find_infinite_line_intersection(service_line, right_line)
 
-    if None in (bl, br, l2, r2):
+    image_corners = [bl, br, r2, l2]
+
+    if None in image_corners:
         return None
 
-    second_y = SECOND_LINE_DEPTH_FT
+    image_points = np.asarray(image_corners, dtype=np.float32)
 
-    img_pts = np.array([bl, br, r2, l2], dtype=np.float32)
-    court_pts = np.array(
+    full_court = np.asarray(
         [
-            [0, COURT_LENGTH],
-            [COURT_WIDTH, COURT_LENGTH],
-            [COURT_WIDTH, second_y],
-            [0, second_y],
+            [[0, COURT_LENGTH]],
+            [[COURT_WIDTH, COURT_LENGTH]],
+            [[COURT_WIDTH, 0]],
+            [[0, 0]],
         ],
         dtype=np.float32,
     )
 
-    # project near intersections to full court
-    H, _ = cv2.findHomography(court_pts, img_pts)
+    H = cv2.getPerspectiveTransform(full_court, image_points)
     if H is None:
         return None
 
