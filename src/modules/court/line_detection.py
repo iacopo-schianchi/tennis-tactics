@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 from utils.consts import COURT_LENGTH, COURT_WIDTH
 
-SERVICE_LINE_OFFSET_FT = 18.0 # from near baseline
+SERVICE_LINE_OFFSET_FT = 18.0 * 0.3048 # from near baseline in mteres
 
 CANNY_THRESHOLD1 = 20
 CANNY_THRESHOLD2 = 80
