@@ -3,7 +3,6 @@ import numpy as np
 from utils.consts import COURT_LENGTH, COURT_WIDTH
 
 SECOND_LINE_DEPTH_FT = 60
-DOUBLES_LENGTH_FT = 78
 
 CANNY_THRESHOLD1 = 20
 CANNY_THRESHOLD2 = 80
@@ -204,7 +203,7 @@ def get_corners(raw_vert, raw_horiz, img_w, img_h):
     if None in (bl, br, l2, r2):
         return None
 
-    second_y = COURT_LENGTH * (1 - SECOND_LINE_DEPTH_FT / DOUBLES_LENGTH_FT)
+    second_y = SECOND_LINE_DEPTH_FT
 
     img_pts = np.array([bl, br, r2, l2], dtype=np.float32)
     court_pts = np.array(
