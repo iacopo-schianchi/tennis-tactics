@@ -22,7 +22,7 @@ class MetricAnnotator:
             shot_name = 'Unnknown'
             if shot_type is not None: shot_name = shot_type.name
             peak = hit_context['peak']
-            speed = round(hit_context['speed'])
+            speed = '--' if hit_context['speed'] is None else round(hit_context['speed'])
             hit_text = f'{shot_name} (~{speed} km/h, ~{peak:.1f}m peak)'
 
             cv2.putText(
