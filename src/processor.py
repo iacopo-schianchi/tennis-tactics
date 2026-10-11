@@ -130,9 +130,6 @@ class VideoProcessor:
                     if len(frames) > window_size:
                         frames.pop(0)
                     self._run_perception(frames, frame_id, modules)
-
-                    if frame_id % 10 == 0:
-                        self.rolling.log(f"Processed {frame_id}/{self.total_frames} frames")
                     
                     frame_id += 1
                 raw_idx += 1
@@ -173,7 +170,7 @@ class VideoProcessor:
                 f"{module_name}: {timing['total_seconds'] / timing['frames']:.4f}s"
                 for module_name, timing in self.module_timing.items()
             )
-            self.rolling.log(averages)
+            self.rolling.log(f"Processed {frame_id}/{self.total_frames} frames. Averages: {averages}")
 
         # return self.context[frame_id]
     
