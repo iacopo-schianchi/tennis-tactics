@@ -12,6 +12,28 @@ import json
 import time
 import math
 
+from collections import deque
+try:
+    from IPython.display import display
+except ImportError:
+    display = None
+
+class RollingLog:
+    def __init__(self, max_lines=4):
+        self.lines = deque(maxlen=max_lines)
+        self.handle = None
+
+    def log(self, text):
+        if display is None:
+            print(text)
+            return
+        self.lines.append(text)
+        body = "\n".join(self.lines)
+        if self.handle is None:
+            self.handle = display(body, display_id=True)
+        else:
+            self.handle.update(body)
+
 class VideoProcessor:
     def __init__(self, far_player, near_player, target_fps=30):
         self.context = []
@@ -85,6 +107,8 @@ class VideoProcessor:
             print("Source FPS:", cap.get(cv2.CAP_PROP_FPS))
             print("Target FPS:", self.target_fps)
 
+            self.rolling = RollingLog(max_lines=4)
+
             frames = []
 
             window_size = max(
@@ -106,8 +130,10 @@ class VideoProcessor:
                     if len(frames) > window_size:
                         frames.pop(0)
                     self._run_perception(frames, frame_id, modules)
+
                     if frame_id % 10 == 0:
-                        print(f"Processed {frame_id}/{self.total_frames} frames")
+                        self.rolling.log(f"Processed {frame_id}/{self.total_frames} frames")
+                    
                     frame_id += 1
                 raw_idx += 1
         
@@ -147,7 +173,7 @@ class VideoProcessor:
                 f"{module_name}: {timing['total_seconds'] / timing['frames']:.4f}s"
                 for module_name, timing in self.module_timing.items()
             )
-            print(f"Running module averages after {frame_id + 1} frames: {averages}")
+            self.rolling.log(averages)
 
         # return self.context[frame_id]
     
