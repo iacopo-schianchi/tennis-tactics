@@ -39,7 +39,7 @@ class VideoAnnotator:
         self.fps = fps
         self.stride = stride
 
-        OUTPUT_DIR = Path("/content/tennis-tactics/assets/Demos")
+        OUTPUT_DIR = Path("assets/Demos")
         OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
         now = datetime.now()
