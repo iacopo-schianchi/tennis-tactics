@@ -54,12 +54,12 @@ class ShotMetricEstimator:
         far = players.get('far') if players else None
 
         checked_offset = 1
-        while (near is None or far is None) and checked_offset <= SHOT_TYPE_COORD_FRAME_PAD and frame_id - checked_offset >= 0 and frame_id + checked_offset < self.processor.total_frames:
+        while (near is None or far is None) and checked_offset <= SHOT_TYPE_COORD_FRAME_PAD:
             id1 = frame_id - checked_offset
             id2 = frame_id + checked_offset
 
-            players1 = context[id1].get('players') if isinstance(context[id1], dict) else None
-            players2 = context[id2].get('players') if isinstance(context[id2], dict) else None
+            players1 = context[id1].get('players') if 0 <= id1 < self.processor.total_frames and isinstance(context[id1], dict) else None
+            players2 = context[id2].get('players') if 0 <= id2 < self.processor.total_frames and isinstance(context[id2], dict) else None
 
             if near is None:
                 if players1 and players1.get('near') is not None:
@@ -129,15 +129,15 @@ class ShotMetricEstimator:
 
         i = frame_id - 1
         while i >= 0:
-            event = context[i]['event']
-            if event['is_hit']: return 'hit', i
-            elif event['is_bounce']: return 'bounce', i
+            event = context[i].get('event') or {}
+            if event.get('is_hit'): return 'hit', i
+            elif event.get('is_bounce'): return 'bounce', i
             i -= 1
 
         return None, None
 
     def _get_near_ball(self, frame_id, context):
-        ball = context[frame_id].get('ball', {})
+        ball = context[frame_id].get('ball') or {}
         bx = ball.get('x_px')
         by = ball.get('y_px')
 
@@ -147,7 +147,7 @@ class ShotMetricEstimator:
         for offset in range(1, SHOT_TYPE_COORD_FRAME_PAD + 1):
             for idx in (frame_id - offset, frame_id + offset):
                 if 0 <= idx < self.processor.total_frames:
-                    candidate = context[idx].get('ball', {})
+                    candidate = context[frame_id].get('ball') or {}
                     if (
                         candidate.get('x_px') is not None
                         and candidate.get('y_px') is not None
@@ -158,6 +158,8 @@ class ShotMetricEstimator:
 
     # returns nearest_player, is_far
     def _get_nearest_player(self, player_boxes, bx, by):
+        if bx is None or by is None:
+            return None, None
         if not player_boxes or (player_boxes.get('near') is None and player_boxes.get('far') is None):
             return None, None
 
@@ -206,13 +208,20 @@ class ShotMetricEstimator:
             curr_is_hit = context[frame_id]['event']['is_hit']
 
             ball = self._get_near_ball(frame_id, context)
-            last_ball = self._get_near_ball(i, context) # TODO: guard against None ball
+            last_ball = self._get_near_ball(i, context)
 
-            curr_nearest_player, _ = self._get_nearest_player(context[frame_id]['players'], ball['x_px'], ball['y_px'])
-            curr_court_coords = curr_nearest_player['feet_m'] if curr_is_hit else (ball['x'], ball['y'])
+            last_players = self._get_surrounding_players(i, context)
+            curr_players = self._get_surrounding_players(frame_id, context)
 
-            speed = self._estimate_speed(last_context, curr_court_coords, T, h0, h1, last_ball)
-            speed_kmh = speed * 3.6
+            if curr_is_hit:
+                curr_nearest_player, _ = self._get_nearest_player(curr_players, ball['x_px'], ball['y_px'])
+                curr_court_coords = curr_nearest_player.get('feet_m') if curr_nearest_player else None
+            else:
+                bx, by = ball.get('x'), ball.get('y')
+                curr_court_coords = (bx, by) if bx is not None and by is not None else None
+
+            speed = self._estimate_speed(last_players, curr_court_coords, T, h0, h1, last_ball)
+            speed_kmh = speed * 3.6 if speed is not None else None
 
         self.processor.set_context(i, {**context[i], 'peak': peak, 'speed': speed_kmh})
 
@@ -233,8 +242,14 @@ class ShotMetricEstimator:
             return d / T
         return (d * k) / (1 - math.exp(-k * T))
 
-    def _estimate_speed(self, last_context, curr_court_coords, T, h0, h1, ball):
-        last_nearest_player, _ = self._get_nearest_player(last_context['players'], ball['x_px'], ball['y_px'])
+    def _estimate_speed(self, last_players, curr_court_coords, T, h0, h1, ball):
+        if curr_court_coords is None or T <= 0:
+            return None
+
+        last_nearest_player, _ = self._get_nearest_player(last_players, ball['x_px'], ball['y_px'])
+        if last_nearest_player is None or last_nearest_player.get('feet_m') is None:
+            return None
+
         last_x, last_y = last_nearest_player['feet_m']
         curr_x, curr_y = curr_court_coords
 
