@@ -73,8 +73,8 @@ class Persister:
             'is_hit': bool(event_context.get('is_hit')),
             'hitting_player': hitting_player, # "near" | "far", converted to player.id
             'shot_type': shot_type,
-            'shot_speed': float(context[frame_id].get('speed')),
-            'shot_height': float(context[frame_id].get('peak')),
+            'shot_speed': None if context[frame_id].get('speed') is None else float(context[frame_id].get('speed')),
+            'shot_height': None if context[frame_id].get('peak') is None else float(context[frame_id].get('peak')),
 
             'is_bounce': bool(event_context.get('is_bounce')),
             'bounce_x': bounce_x,
