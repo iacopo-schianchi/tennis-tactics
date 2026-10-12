@@ -1,6 +1,7 @@
 from uuid import uuid4
 
 from modules.court.annotator import SINGLES_SIDELINE_INSET_M
+from modules.metrics.estimator import ShotTypes
 from utils.consts import COURT_WIDTH
 
 from datetime import datetime
@@ -20,7 +21,6 @@ def gen_id():
 
 def other(role):
     return 'far' if role == 'near' else 'near'
-
 
 class Persister:
     def __init__(self, players, recorded_on=datetime.now().strftime("%Y-%m-%d")):
@@ -62,15 +62,19 @@ class Persister:
                 is_in_x = MIN_X_PERCENT <= bounce_x <= MAX_X_PERCENT
                 is_in = is_in_x and is_in_y
 
+        shot_type = context[frame_id].get('shot_type')
+        if shot_type is not None:
+            shot_type = getattr(shot_type, 'name', shot_type).lower()
+
         return {
             'id': gen_id(),
             '_frame': frame_id, # for gap checks
 
             'is_hit': bool(event_context.get('is_hit')),
             'hitting_player': hitting_player, # "near" | "far", converted to player.id
-            'shot_type': context[frame_id].get('shot_type'),
-            'shot_speed': context[frame_id].get('speed'),
-            'shot_height': context[frame_id].get('peak'),
+            'shot_type': shot_type,
+            'shot_speed': float(context[frame_id].get('speed')),
+            'shot_height': float(context[frame_id].get('peak')),
 
             'is_bounce': bool(event_context.get('is_bounce')),
             'bounce_x': bounce_x,
@@ -113,7 +117,7 @@ class Persister:
         return hitter is not None and side is not None and side != hitter
 
     def _mark_serve(self, hit):
-        if hit['shot_type'] == 'overhead':
+        if hit['shot_type'] in ('overhead', 'serve'):
             hit['shot_type'] = 'serve'
             return hit['hitting_player']
         return None
@@ -155,7 +159,6 @@ class Persister:
             row['hitting_player_id'] = self._player_id(role)
             row['point_id'] = point_id
             row['event_order'] = order
-            row['next_event_id'] = active[order]['id'] if order < len(active) else None
             rows.append(row)
 
         point = {
