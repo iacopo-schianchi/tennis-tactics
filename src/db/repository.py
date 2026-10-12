@@ -23,4 +23,6 @@ class ClipRepository:
         self._upsert_rows('points', rows['points'])
         self._upsert_rows('events', rows['events'])
 
+        print("Successfully saved clip data")
+
         return persisted
