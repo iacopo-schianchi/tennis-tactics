@@ -6,7 +6,7 @@ from modules.ball.kinematics import BallKinematics
 from modules.events.detector import EventDetector
 from modules.metrics.estimator import ShotMetricEstimator
 from persister import Persister
-from db.repository import MatchRepository
+from db.repository import ClipRepository
 from annotator import VideoAnnotator
 import json
 import time
@@ -141,7 +141,7 @@ class VideoProcessor:
 
     def _persist_stats(self):
         persisted = Persister(self.player_map).persist(self.context)
-        MatchRepository().save(persisted)
+        ClipRepository().save(persisted)
 
     def _run_annotation(self, video_path):
         annotator = VideoAnnotator(self.context, self.fps, self.stride)

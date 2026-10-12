@@ -1,29 +1,31 @@
-from modules.court.annotator import SINGLES_SIDELINE_INSET_M
-from utils.consts import COURT_WIDTH
 from uuid import uuid4
 
-# singles in range
+from modules.court.annotator import SINGLES_SIDELINE_INSET_M
+from utils.consts import COURT_WIDTH
+
+from datetime import datetime
+
 MIN_X_PERCENT = SINGLES_SIDELINE_INSET_M / COURT_WIDTH * 100.0
 MAX_X_PERCENT = (1 - (SINGLES_SIDELINE_INSET_M / COURT_WIDTH)) * 100.0
+
+NET_Y_PERCENT = 50.0
+SEARCH_FRAME_PAD = 5
+
+MAX_GAP_FRAMES = 120
+
 
 def gen_id():
     return str(uuid4())
 
-SEARCH_FRAME_PAD = 5
+
+def other(role):
+    return 'far' if role == 'near' else 'near'
+
 
 class Persister:
-    def __init__(self, players, games_per_set=6, sets_per_match=3):
-        if not isinstance(games_per_set, int) or games_per_set < 1:
-            raise ValueError('games_per_set must be a positive integer')
-        if not isinstance(sets_per_match, int) or sets_per_match < 1:
-            raise ValueError('sets_per_match must be a positive integer')
-
-        self.players = {
-            role: player
-            for role, player in players.items()
-        }
-        self.games_per_set = games_per_set
-        self.sets_per_match = sets_per_match
+    def __init__(self, players, recorded_on=datetime.now().strftime("%Y-%m-%d")):
+        self.players = dict(players)
+        self.recorded_on = recorded_on
 
     def _find_near_property(self, frame_id, context, fetch_child, role=None):
         for offset in range(SEARCH_FRAME_PAD + 1):
@@ -42,68 +44,44 @@ class Persister:
                         return value
         return None
 
-    def _form_event(self, frame_id, context, point_id):
-        event_context = context[frame_id].get('event', {})
+    def _form_event(self, frame_id, context):
+        event_context = context[frame_id].get('event') or {}
 
         def player_coord(role, axis):
-            value = self._find_near_property(
-                frame_id,
-                context,
-                lambda player: (player.get('feet_pct') or [None, None])[axis],
-                role
-            )
-            return value
+            return self._find_near_property(frame_id, context, lambda player: (player.get('feet_pct') or [None, None])[axis], role)
 
-        near_player_x = player_coord('near', 0)
-        near_player_y = player_coord('near', 1)
-        far_player_x = player_coord('far', 0)
-        far_player_y = player_coord('far', 1)
+        hitting_player = None
+        if event_context.get('is_hit'):
+            hitting_player = event_context.get('hitting_player') or self._infer_hitting_player(frame_id, context)
 
-        hitting_player = event_context.get('hitting_player')
-        shot_type = context[frame_id].get('shot_type')
-        shot_speed = context[frame_id].get('speed')
-        shot_height = context[frame_id].get('peak')
-
-        if event_context.get('is_hit') and hitting_player is None:
-            hitting_player = self._infer_hitting_player(frame_id, context)
-
-        bounce_x, bounce_y = None, None
-        is_in = False
+        bounce_x, bounce_y, is_in = None, None, None
         if event_context.get('is_bounce'):
             bounce_x, bounce_y = event_context.get('bounce_coord_pct') or (None, None)
-
             if bounce_x is not None and bounce_y is not None:
                 is_in_y = 0 <= bounce_y <= 100
                 is_in_x = MIN_X_PERCENT <= bounce_x <= MAX_X_PERCENT
                 is_in = is_in_x and is_in_y
 
-
-        event = {
+        return {
             'id': gen_id(),
-            'point_id': point_id,
-            'next_event_id': None,
+            '_frame': frame_id, # for gap checks
 
-            # hit
-            'frame_id': frame_id,
             'is_hit': bool(event_context.get('is_hit')),
-            'hitting_player': hitting_player,
-            'shot_type': shot_type,
-            'shot_speed': shot_speed,
-            'shot_height': shot_height,
+            'hitting_player': hitting_player, # "near" | "far", converted to player.id
+            'shot_type': context[frame_id].get('shot_type'),
+            'shot_speed': context[frame_id].get('speed'),
+            'shot_height': context[frame_id].get('peak'),
 
-            # bounce
             'is_bounce': bool(event_context.get('is_bounce')),
             'bounce_x': bounce_x,
             'bounce_y': bounce_y,
             'is_in': is_in,
 
-            # shared
-            'near_player_x': near_player_x,
-            'near_player_y': near_player_y,
-            'far_player_x': far_player_x,
-            'far_player_y': far_player_y
+            'near_player_x': player_coord('near', 0),
+            'near_player_y': player_coord('near', 1),
+            'far_player_x': player_coord('far', 0),
+            'far_player_y': player_coord('far', 1),
         }
-        return event
 
     def _infer_hitting_player(self, frame_id, context):
         players = context[frame_id].get('players', {})
@@ -124,153 +102,152 @@ class Persister:
                 nearest, nearest_distance = role, distance
         return nearest
 
-    def persist(self, context):
-        events, points = [], []
-        current_events = []
+    def _side(self, y):
+        if y is None or y == NET_Y_PERCENT: return None
+        return 'near' if y > NET_Y_PERCENT else 'far'
 
-        def close_point(winner=None, is_winner=False):
-            nonlocal current_events
-            if not current_events:
-                return
-            point_id = gen_id()
-            for event_order, item in enumerate(current_events, start=1):
-                item['point_id'] = point_id
-                item['event_order'] = event_order
-            point = {
-                'id': point_id,
-                'game_id': None,
-                'point_order': None,
-                'winner_id': self._player_id(winner),
-                'is_winner': is_winner,
-                'last_hit_id': next((item['id'] for item in reversed(current_events) if item['is_hit']), None)
-            }
-            points.append(point)
-            current_events = []
+    # only if hit bounces on other side
+    def _starts_point(self, hit, bounce):
+        hitter = hit['hitting_player']
+        side = self._side(bounce['bounce_y'])
+        return hitter is not None and side is not None and side != hitter
+
+    def _mark_serve(self, hit):
+        if hit['shot_type'] == 'overhead':
+            hit['shot_type'] = 'serve'
+            return hit['hitting_player']
+        return None
+
+    def _is_ace(self, active):
+        hits = [event for event in active if event['is_hit']]
+        return len(hits) == 1 and hits[0]['shot_type'] == 'serve'
+
+    # return point winnner, reason
+    def _judge(self, active):
+        bounce = active[-1]
+        previous = active[-2]
+
+        hits = [e for e in active[:-1] if e['is_hit']]
+        last_hit = hits[-1] if hits else None
+        hitter = last_hit['hitting_player'] if last_hit else None
+        if hitter is None:
+            return None, None
+        side = self._side(bounce['bounce_y'])
+
+        if previous['is_hit']:
+            # 1st bounce after hit
+            if bounce['is_in'] is False or side == hitter:
+                return other(hitter), 'unforced_error'
+            return None, None
+
+        # 2nd bounce on same side
+        if side is not None and side == self._side(previous['bounce_y']):
+            return other(side), ('ace' if self._is_ace(active) else 'winner')
+        return None, None
+
+    def _build_point(self, active, winner_role, end_reason, server_role, clip_id):
+        point_id = gen_id()
+        rows = []
+        for order, event in enumerate(active, start=1):
+            row = dict(event)
+            row.pop('_frame')
+            role = row.pop('hitting_player')
+            row['hitting_player_id'] = self._player_id(role)
+            row['point_id'] = point_id
+            row['event_order'] = order
+            row['next_event_id'] = active[order]['id'] if order < len(active) else None
+            rows.append(row)
+
+        point = {
+            'id': point_id,
+            'near_player_id': self._player_id('near'),
+            'far_player_id': self._player_id('far'),
+            'server_id': self._player_id(server_role),
+            'winner_id': self._player_id(winner_role),
+            'end_reason': end_reason,
+            'last_hit_id': next((r['id'] for r in reversed(rows) if r['is_hit']), None),
+            'clip_id': clip_id
+        }
+        return point, rows
+
+    def _gen_clip(self):
+        clip_id = gen_id()
+        return {
+            'id': clip_id,
+            'recorded_on': self.recorded_on
+        }
+
+    def persist(self, context):
+        clip = self._gen_clip()
+
+        points, events = [], []
+        pending_hit = None
+        active = []
+        server_role = None
+        fault_server = None
 
         for frame_id, frame_context in enumerate(context):
             event_context = frame_context.get('event') or {}
-            if not event_context.get('is_hit') and not event_context.get('is_bounce'):
+            is_hit = bool(event_context.get('is_hit'))
+            if not is_hit and not event_context.get('is_bounce'):
                 continue
-            point_id = current_events[0]['point_id'] if current_events else None
-            event_data = self._form_event(frame_id, context, point_id)
-            if current_events:
-                current_events[-1]['next_event_id'] = event_data['id']
-            current_events.append(event_data)
-            events.append(event_data)
+            event = self._form_event(frame_id, context)
 
-            if event_data['is_bounce'] and not event_data['is_in']:
-                close_point(self._opponent_of_last_hit(current_events), False)
-            elif len(current_events) >= 2 and current_events[-1]['is_bounce'] and current_events[-2]['is_bounce']:
-                close_point(self._opponent_of_last_hit(current_events), True)
+            # ball lost for too long
+            anchor = active[-1] if active else pending_hit
+            if anchor is not None and frame_id - anchor['_frame'] > MAX_GAP_FRAMES:
+                active, pending_hit, server_role = [], None, None
 
-        close_point()
-        games, sets, matches = self._build_match(points, events)
+            if not active:
+                if is_hit:
+                    pending_hit = event
+                    continue
+                hit, pending_hit = pending_hit, None
+                if hit is None or not self._starts_point(hit, event):
+                    continue
+
+                # start point
+                active = [hit, event]
+                server_role = self._mark_serve(hit)
+            elif is_hit:
+                previous = active[-1]
+                hitter = event['hitting_player']
+                if previous['is_hit'] and hitter is not None and previous['hitting_player'] == hitter:
+                    continue # duplicate hit by same player
+                active.append(event)
+                continue
+            else:
+                active.append(event)
+
+            winner, reason = self._judge(active)
+            if winner is None or reason is None:
+                continue
+
+            # serve fault
+            if server_role is not None and len(active) == 2:
+                if fault_server == server_role:
+                    winner, reason = other(server_role), 'double_fault'
+                else:
+                    fault_server = server_role
+                    active, server_role = [], None
+                    continue
+
+            point, rows = self._build_point(active, winner, reason, server_role, clip['id'])
+            points.append(point)
+            events.extend(rows)
+            active, server_role, fault_server = [], None, None
+
         return {
             'players': self._player_rows(),
-            'events': events,
             'points': points,
-            'games': games,
-            'sets': sets,
-            'matches': matches,
+            'events': events,
+            'clips': [clip] if len(points) > 0 else []
         }
-
-    def _build_match(self, points, events):
-        games = []
-        sets = []
-        current_game_points = []
-        current_game_score = {'near': 0, 'far': 0}
-        current_set_games = []
-        current_set_score = {'near': 0, 'far': 0}
-        match_set_ids = []
-        event_by_id = {event['id']: event for event in events}
-
-        def close_game():
-            nonlocal current_game_points, current_game_score, current_set_games
-            if not current_game_points:
-                return
-            game_id = gen_id()
-            for point in current_game_points:
-                point['game_id'] = game_id
-            game = {
-                'id': game_id,
-                'set_id': None,
-                'game_order': None,
-                'near_player_score': current_game_score['near'],
-                'far_player_score': current_game_score['far'],
-                'server_id': self._server_id(current_game_points, event_by_id),
-                'winner': 'near' if current_game_score['near'] > current_game_score['far'] else 'far',
-            }
-            games.append(game)
-            for point_order, point in enumerate(current_game_points, start=1):
-                point['point_order'] = point_order
-            game['game_order'] = len(current_set_games) + 1
-            current_set_games.append(game)
-            current_game_points = []
-            current_game_score = {'near': 0, 'far': 0}
-
-        def close_set():
-            nonlocal current_set_games, current_set_score
-            if not current_set_games:
-                return
-            set_id = gen_id()
-            for game in current_set_games:
-                game['set_id'] = set_id
-            set_data = {
-                'id': set_id,
-                'match_id': None,
-                'set_order': len(match_set_ids) + 1,
-                'near_player_score': current_set_score['near'],
-                'far_player_score': current_set_score['far'],
-            }
-            sets.append(set_data)
-            match_set_ids.append(set_id)
-            current_set_games = []
-            current_set_score = {'near': 0, 'far': 0}
-
-        for point in points:
-            winner_role = self._role_for_id(point['winner_id'])
-            if winner_role is None:
-                continue
-            current_game_points.append(point)
-            current_game_score[winner_role] += 1
-            near_points = current_game_score['near']
-            far_points = current_game_score['far']
-            game_won = max(near_points, far_points) >= 4 and abs(near_points - far_points) >= 2
-            if game_won:
-                winner = 'near' if near_points > far_points else 'far'
-                close_game()
-                current_set_score[winner] += 1
-                set_won = current_set_score[winner] >= self.games_per_set
-                if set_won:
-                    close_set()
-
-        close_game()
-        if current_set_games:
-            close_set()
-
-        match_id = gen_id()
-        for set_data in sets:
-            set_data['match_id'] = match_id
-        matches = [{
-            'id': match_id,
-            'near_player_id': self._player_id('near'),
-            'far_player_id': self._player_id('far'),
-            'near_player_score': sum(set_data['near_player_score'] > set_data['far_player_score'] for set_data in sets),
-            'far_player_score': sum(set_data['far_player_score'] > set_data['near_player_score'] for set_data in sets),
-        }]
-        return games, sets, matches
-
-    def _server_id(self, game_points, event_by_id):
-        if not game_points:
-            return None
-        first_hit_id = game_points[0].get('last_hit_id')
-        first_hit = event_by_id.get(first_hit_id, {})
-        return self._player_id(first_hit.get('hitting_player'))
 
     def _player_rows(self):
         rows = []
         for role in ('near', 'far'):
-            player = self.players.get(role) if isinstance(self.players, dict) else None
+            player = self.players.get(role)
             if isinstance(player, dict):
                 rows.append({
                     'id': player.get('id'),
@@ -284,86 +261,5 @@ class Persister:
     def _player_id(self, role):
         if role is None:
             return None
-        if isinstance(self.players, dict):
-            player = self.players.get(role, role)
-            return player.get('id') if isinstance(player, dict) else player
-        for player in self.players or []:
-            if isinstance(player, dict) and player.get('role') == role:
-                return player.get('id')
-        return role
-
-    def _role_for_id(self, player_id):
-        for role in ('near', 'far'):
-            if self._player_id(role) == player_id:
-                return role
-        return None
-
-    def _opponent_of_last_hit(self, events):
-        last_hit = next((event for event in reversed(events) if event['is_hit']), None)
-        if last_hit is None:
-            return None
-        return 'far' if last_hit.get('hitting_player') == 'near' else 'near'
-
-"""
----
-players
-1. id
-2. handedness
-3. name
-
----
-matches
-1. id
-2. near_player_id -> players.id
-3. far_player_id -> players.id
-4. near_player_score
-5. far_player_score
-6. set_order (['near' | 'far', ...])
-
----
-sets
-1. id 
-2. match_id -> match.id
-3. near_player_score
-4. far_player_score
-5. game_order (['near' | 'far', ...])
-
----
-games
-1. id
-2. set_id -> sets.id
-3. near_player_score
-4. far_player_score
-5. point_order (['near' | 'far', ...])
-6. server_id -> players.id
-
----
-points
-1. game_id -> game.id
-2. winner_id -> players.id
-3. is_winner (bounces in then out w/o hit)
-4. last_hit_id -> event.id
-
----
-event
-1. id
-2. is_hit
-3. near_player_x / near-player_y
-4. far_player_x / far_player_y
-5. hitting_player ('near' | 'far')
-6. shot_type
-7. shot_speed
-8. shot_height
-9. point_id -> points.id
-10. next_event_id -> event.id
-
-1. id
-2. is_bounce
-3. bounce_x / bounce_y
-4. near_player_x / near-player_y
-5. far_player_x / far_player_y
-6. is_in
-7. point_id -> point.id
-8. next_event_id -> event.id
-
-"""
+        player = self.players.get(role, role)
+        return player.get('id') if isinstance(player, dict) else player
