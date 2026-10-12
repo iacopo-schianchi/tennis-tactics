@@ -83,6 +83,7 @@ class VideoProcessor:
         self.total_frames = math.ceil(self.source_frames / self.stride)
 
     def process(self, video_path, context_path=None, start_pass=0, persist=True):
+        print(persist)
         print("Processing video...")
         self.module_timing = {}
         

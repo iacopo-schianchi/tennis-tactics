@@ -14,14 +14,13 @@ class ClipRepository:
         return self.client.table(table_name).upsert(rows).execute().data
     
     def save(self, persisted):
+        print(persisted)
         rows = {table: list(persisted.get(table, [])) for table in self.INSERT_ORDER}
 
         for table_name in self.INSERT_ORDER[:2]:
             self._upsert_rows(table_name, rows[table_name])
 
-        points = [dict(row, last_hit_id=None) for row in rows['points']]
-        events = [dict(row, next_event_id=None) for row in rows['events']]
-        self._upsert_rows('points', points)
-        self._upsert_rows('events', events)
+        self._upsert_rows('points', rows['points'])
+        self._upsert_rows('events', rows['events'])
 
         return persisted
