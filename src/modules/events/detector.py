@@ -35,16 +35,6 @@ class EventDetector:
 
         X_raw = np.array(feature_list, dtype=np.float32)
 
-        # temporary debug prints
-        print("[dbg] scaler cols:", list(getattr(self.scaler, "feature_names_in_", [])))
-        print("[dbg] code cols:", self.FEATURE_COLS)
-        print("[dbg] ball keys:", sorted(next((f["ball"] for f in context if f.get("ball")), {}).keys()))
-        print("[dbg] raw mean:", X_raw.mean(0).round(2).tolist())
-        print("[dbg] train mean:", self.scaler.mean_.round(2).tolist())
-        print("[dbg] raw std:", X_raw.std(0).round(2).tolist())
-        print("[dbg] train std:", self.scaler.scale_.round(2).tolist())
-        print("[dbg] zero frac:", (X_raw == 0).mean(0).round(2).tolist())
-
         X_scaled = self.scaler.transform(X_raw)
         X_scaled = np.nan_to_num(X_scaled, nan=0.0)
 
@@ -79,11 +69,6 @@ class EventDetector:
 
         accepted_hits = self._filter_events(predicted_status, avg_probs, 1)
         accepted_bounces = self._filter_events(predicted_status, avg_probs, 2)
-
-        print("[dbg] argmax counts none/hit/bounce:", np.bincount(predicted_status, minlength=3).tolist())
-        print("[dbg] max probs none/hit/bounce:", avg_probs.max(0).round(2).tolist())
-        print("[dbg] hits:", np.flatnonzero(accepted_hits).tolist())
-        print("[dbg] bounces:", np.flatnonzero(accepted_bounces).tolist())
 
         self.predictions_cache = []
         for frame in range(n_total):
