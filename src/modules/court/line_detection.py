@@ -223,7 +223,7 @@ def get_corners(raw_vert, raw_horiz, img_w, img_h):
         return None
 
     full_court = np.array(
-        [[[0, 0]], [[COURT_WIDTH, 0]], [[COURT_WIDTH, COURT_LENGTH]], [[0, COURT_LENGTH]]],
+        [[[0, COURT_LENGTH]], [[COURT_WIDTH, COURT_LENGTH]], [[COURT_WIDTH, 0]], [[0, 0]]],
         dtype=np.float32,
     )
     projected = cv2.perspectiveTransform(full_court, H).reshape(-1, 2)
