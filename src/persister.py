@@ -165,7 +165,6 @@ class Persister:
             'server_id': self._player_id(server_role),
             'winner_id': self._player_id(winner_role),
             'end_reason': end_reason,
-            'last_hit_id': next((r['id'] for r in reversed(rows) if r['is_hit']), None),
             'clip_id': clip_id
         }
         return point, rows
