@@ -23,7 +23,7 @@ class AnalyticsReport:
         return report
 
     def _run_query(self, query):
-        result = QueryResult(query.name, query.description, query.tags)
+        result = QueryResult(query.name, query.description)
 
         try:
             result.rows = run_sql(query.sql, {"player_id": self.player_id})
