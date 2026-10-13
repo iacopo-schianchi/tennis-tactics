@@ -13,8 +13,10 @@ MAX_LINE_GAP = 120
 
 HORIZ_ANGLE_THRESH = 25
 VERT_ANGLE_THRESH = 75
-MIN_WIDTH_FRACTION = 0.18 # was 0.22
-MIN_HEIGHT_FRACTION = 0.4
+
+# fractions of max line length
+MIN_HORIZ_LENGTH_FRACTION = 0.4
+MIN_VERT_LENGTH_FRACTION = 0.6
 
 LINE_CLUSTER_THERSH = 25
 RHO_THRESH = 20.0
@@ -35,16 +37,16 @@ def get_lines(mask):
 
     return lines
 
-def split_by_orientation(lines, img_w, img_h):
+def split_by_orientation(lines):
     horiz, vert = [], []
 
-    min_length_w = img_w * MIN_WIDTH_FRACTION
-    min_length_h = img_h * MIN_HEIGHT_FRACTION
+    max_horiz_length = 0
+    max_vert_length = 0
 
     for line in lines:
         x1, y1, x2, y2 = line.flatten()
         length = np.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
-        angle = abs(np.degrees(np.arctan2(y2 - y1, x2 - x1))) % 180
+        angle = abs(np.degrees(np.arctan2(y2 - y1, x2 - x1))) % 180 
 
         # dist from horiz
         horizontal_angle = min(angle, 180 - angle)
@@ -52,13 +54,23 @@ def split_by_orientation(lines, img_w, img_h):
         # dist from vert
         vertical_angle = abs(angle - 90)
 
-        if horizontal_angle < HORIZ_ANGLE_THRESH and length >= min_length_w:
-            horiz.append(line.flatten())
+        if horizontal_angle < HORIZ_ANGLE_THRESH:
+            horiz.append((line.flatten(), length))
+            if length > max_horiz_length:
+                max_horiz_length = length
 
-        elif vertical_angle < VERT_ANGLE_THRESH and length >= min_length_h:
-            vert.append(line.flatten())
-            
-    return vert, horiz
+        elif vertical_angle < VERT_ANGLE_THRESH:
+            vert.append((line.flatten(), length))
+            if length > max_vert_length:
+                max_vert_length = length
+
+    min_length_h = max_horiz_length * MIN_HORIZ_LENGTH_FRACTION
+    min_length_v = max_vert_length * MIN_VERT_LENGTH_FRACTION
+
+    filtered_horiz = [line for line, length in horiz if length >= min_length_h]
+    filtered_vert = [line for line, length in vert if length >= min_length_v]
+
+    return filtered_vert, filtered_horiz
 
 def line_to_rho_theta(line):
     x1, y1, x2, y2 = line
@@ -190,10 +202,8 @@ def get_boundary_lines(h_clusters, v_clusters, img_w, img_h):
 def get_corners(raw_vert, raw_horiz, img_w, img_h):
     v_clusters = cluster_segments(raw_vert)
     h_clusters = cluster_segments(raw_horiz)
-    print("raw", len(raw_vert), len(raw_horiz), "clusters", len(v_clusters), len(h_clusters))
 
     boundary = get_boundary_lines(h_clusters, v_clusters, img_w, img_h)
-    print("boundary", boundary)
     if boundary is None:
         return None
     near_line, service_line, left_line, right_line = boundary

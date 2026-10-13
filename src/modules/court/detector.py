@@ -60,7 +60,7 @@ class CourtDetector:
         lines = get_lines(line_mask)
 
         height, width = image_np.shape[:2]
-        raw_vert, raw_horiz = split_by_orientation(lines, width, height)
+        raw_vert, raw_horiz = split_by_orientation(lines)
 
         corners = get_corners(raw_vert, raw_horiz, width, height)
         
@@ -75,10 +75,6 @@ class CourtDetector:
             ],
             dtype=np.float32
         )
-
-        print("src", None if src_pts is None else (np.shape(src_pts), np.asarray(src_pts).dtype))
-        print("dst", np.shape(dst), np.asarray(dst).dtype)
-        print(src_pts)
 
         H = None
         if np.isfinite(src_pts).all() and src_pts.shape == (4, 2):
