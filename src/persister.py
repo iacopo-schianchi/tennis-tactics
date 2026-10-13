@@ -145,6 +145,11 @@ class Persister:
         hits = [event for event in active if event['is_hit']]
         return len(hits) == 1 and hits[0]['shot_type'] == 'serve'
 
+    def _is_valid_point(self, events):
+        hits = [e for e in events if e["is_hit"]]
+        starts_with_serve = bool(hits) and hits[0].get("shot_type") == "serve"
+        return starts_with_serve or len(hits) >= 2
+
     # return point winnner, reason
     def _judge(self, active):
         bounce = active[-1]
@@ -252,6 +257,11 @@ class Persister:
                     fault_server = server_role
                     active, server_role = [], None
                     continue
+
+            if not self._is_valid_point(active):
+                print("Invalid point detected, skipping...")
+                active, server_role, fault_server = [], None, None
+                continue
 
             point, rows = self._build_point(active, winner, reason, server_role, clip['id'])
             points.append(point)
