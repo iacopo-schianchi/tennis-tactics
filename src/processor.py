@@ -55,7 +55,7 @@ class VideoProcessor:
             ),
             (
                 PlayerFilter(self.fps),
-            )
+            ),
             (
                 BallKinematics(self, self.fps),
             ),
