@@ -76,6 +76,10 @@ class CourtDetector:
             dtype=np.float32
         )
 
+        print("src", None if src_pts is None else (np.shape(src_pts), np.asarray(src_pts).dtype))
+        print("dst", np.shape(dst), np.asarray(dst).dtype)
+        print(src_pts)
+
         H, _ = cv2.findHomography(src_pts, dst)
 
         if debug:
