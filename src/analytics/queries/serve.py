@@ -30,9 +30,9 @@ register(Query(
     name="win_rate_serving_vs_returning",
     description="Point win rate when serving vs. returning",
     sql="""
-select (server_id = %{player_id}s) as is_server, count(*) as points, count(*) as filter (where winner_id = %(player_id)s) as wins
+select (server_id = %(player_id)s) as is_server, count(*) as points, count(*) as filter (where winner_id = %(player_id)s) as wins
 from points
-where %{player_id}s in (near_player_id, far_player_id) and winner_id is not null
+where %(player_id)s in (near_player_id, far_player_id) and winner_id is not null
 group by 1
 """,
     generate_insight=generate_insight
