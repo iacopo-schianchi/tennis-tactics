@@ -54,7 +54,7 @@ class VideoProcessor:
                 BallDetector(self, self.fps),
             ),
             (
-                PlayerFilter(self.fps)
+                PlayerFilter(self.fps),
             )
             (
                 BallKinematics(self, self.fps),
