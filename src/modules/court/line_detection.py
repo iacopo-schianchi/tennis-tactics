@@ -193,9 +193,15 @@ def get_boundary_lines(h_clusters, v_clusters, img_w, img_h):
     h_positions.sort(key=lambda x: x[0], reverse=True)
     (_, near_line), (_, second_line) = h_positions[0], h_positions[1]
 
-    left_line = min(v_positions, key=lambda x: x[0])[1]
-    right_line = max(v_positions, key=lambda x: x[0])[1]
+    # filter vertical lines that intersect baseline outside frame
+    kept = []
+    for _, line in v_positions:
+        p = find_infinite_line_intersection(line, near_line)
+        if p is not None and 0 <= p[0] <= img_w:
+            kept.append((p[0], line))
 
+    left_line = min(kept, key=lambda x: x[0])[1]
+    right_line = max(kept, key=lambda x: x[0])[1]
     return near_line, second_line, left_line, right_line
 
 # estimate all corners using near baseline and service line
