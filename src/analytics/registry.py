@@ -5,7 +5,7 @@ from typing import Callable
 @dataclass
 class Query:
     name: str
-    descrption: str
+    description: str
     sql: str
     generate_insight: Callable | None = None
 
