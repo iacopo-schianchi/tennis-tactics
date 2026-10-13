@@ -4,38 +4,52 @@ from ultralytics import YOLO
 from utils.consts import COURT_WIDTH, COURT_LENGTH
 
 yolo = YOLO("yolov8n.pt")
+tracker = "bytetrack.yaml"
 
 class PlayerDetector:
     def __init__(self, player_map):
         self.player_map = player_map
 
     def process(self, frames, frame_id, context):
-        raw_bboxes = self._detect_players(frames[-1])
+        detections = self._detect_players(frames[-1])
 
         court = context[frame_id].get("court")
-        players = self._classify_players(raw_bboxes, court, frames[-1].shape[0])
+        players = [self._build_player_dict(detection, court, frame_id) for detection in detections]
 
-        return {"players": players}
+        return {"all_players": players}
 
     def _detect_players(self, frame, conf=0.35):
-        results = yolo.predict(
+        results = yolo.track(
             frame,
             verbose=False,
-            conf=conf
+            conf=conf,
+            tracker=tracker,
+            persist=True,
+            classes=[0] # person
         )
 
-        player_boxes = []
+        detections = []
 
-        for r in results:
-            for box in r.boxes:
-                if int(box.cls) == 0: # person
-                    x1, y1, x2, y2 = map(int, box.xyxy[0])
-                    player_boxes.append((x1, y1, x2, y2))
+        for result in results:
+            if result.boxes is None:
+                continue
 
-        return player_boxes
+            boxes = result.boxes
 
-    def _dist(self, p1, p2):
-        return np.sqrt((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2)
+            for i, box in enumerate(boxes):
+                x1, y1, x2, y2 = map(
+                    int, box.xyxy[0].cpu().numpy()
+                )
+
+                track_id = None
+                if boxes.id is not None:
+                    track_id = int(boxes.id[i].item())
+
+                detections.append(
+                    ((x1, y1, x2, y2), track_id)
+                )
+
+        return detections
 
     def _pixel_to_court(self, x, y, H):
         src_pt = np.array([[[x, y]]], dtype=np.float32)
@@ -44,52 +58,32 @@ class PlayerDetector:
         x_pct = (x_bev / COURT_WIDTH) * 100.0
         y_pct = (y_bev / COURT_LENGTH) * 100.0
 
-        return (int(x_pct), int(y_pct)), (int(x_bev), int(y_bev))
+        return (x_pct, y_pct), (x_bev, y_bev)
 
-    def _build_player_dict(self, bbox, court, role):
+    def _build_player_dict(self, detection, court, frame_id):
+        bbox, track_id = detection
         x1, y1, x2, y2 = bbox
         feet_x_px = (x1 + x2) / 2.0
         feet_y_px = y2
 
         # pixel to percent
         pct = (None, None)
-        H = court['H']
+        H = court.get('H')
+        bev = None
         if H is not None:
             pct, bev = self._pixel_to_court(feet_x_px, feet_y_px, H)
 
+        _, y_pct = pct
+        role = None
+        if y_pct is not None:
+            role = "near" if y_pct > 50 else "far"
+
         return {
-            "id": self.player_map.get(role, {}).get("id"),
-            "bbox": [int(x1), int(y1), int(x2), int(y2)],
-            "feet_px": [int(feet_x_px), int(feet_y_px)], # coords in image pixel coordinates
+            "id": track_id,
+            "bbox": bbox,
+            "feet_px": [feet_x_px, feet_y_px], # coords in image pixel coordinates
             "feet_m": bev, # coords in meters on court suface
             "feet_pct": pct, # coords as court %
+            "role": role,
+            "frame_id": frame_id
         }
-    
-    def _classify_players(self, bboxes, court, frame_height):
-        if not bboxes or len(bboxes) == 0:
-            return {'near': None, 'far': None}
-
-        tl, tr, br, bl = court['points']
-
-        cx = (tl[0] + br[0] + tr[0] + bl[0]) / 4
-        cy = (tl[1] + br[1] + tr[1] + bl[1]) / 4
-        center = (int(cx), int(cy))
-
-        # TODO: filter players that move < MOVE_THRESHOLD per frame throughout clip if len(bboxes) > 2
-
-        # keep 2 nearest to center
-        players = sorted(bboxes, key=lambda b: self._dist(((b[0] + b[2]) // 2, (b[1] + b[3]) // 2), center))[:min(2, len(bboxes))]
-
-        sorted_players = sorted(players, key=lambda p: p[3])
-
-        if len(players) == 2:
-            far, near = sorted_players
-            return {'near': self._build_player_dict(near, court, 'near'), 'far': self._build_player_dict(far, court, 'far')}
-        else:
-            feet_y = players[0][3]
-            out = {}
-
-            role = "near" if feet_y > (frame_height / 2) else "far"
-            out[role] = self._build_player_dict(players[0], court, role)
-            return out
-

@@ -1,6 +1,7 @@
 import cv2
 from modules.court.detector import CourtDetector
 from modules.player.detector import PlayerDetector
+from modules.player.filter import PlayerFilter
 from modules.ball.detector import BallDetector
 from modules.ball.kinematics import BallKinematics
 from modules.events.detector import EventDetector
@@ -52,6 +53,9 @@ class VideoProcessor:
                 PlayerDetector(self.player_map),
                 BallDetector(self, self.fps),
             ),
+            (
+                PlayerFilter(self.fps)
+            )
             (
                 BallKinematics(self, self.fps),
             ),
