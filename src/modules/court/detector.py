@@ -13,7 +13,7 @@ predictor = load_sam_model(DEVICE)
 
 class CourtDetector:
     def process(self, frames, frame_id, context):
-        if frame_id == 0:
+        if frame_id == 0 or (frame_id != 0 and context[frame_id - 1].get("court").get('H') is None):
             pts, H = self.detect_court(frames[0], True)
         else:
             last_court = context[frame_id - 1].get("court")
@@ -80,7 +80,9 @@ class CourtDetector:
         print("dst", np.shape(dst), np.asarray(dst).dtype)
         print(src_pts)
 
-        H, _ = cv2.findHomography(src_pts, dst)
+        H = None
+        if src_pts is not None:
+            H, _ = cv2.findHomography(src_pts, dst)
 
         if debug:
             show_detection_debug(
