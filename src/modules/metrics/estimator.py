@@ -147,11 +147,8 @@ class ShotMetricEstimator:
         for offset in range(1, SHOT_TYPE_COORD_FRAME_PAD + 1):
             for idx in (frame_id - offset, frame_id + offset):
                 if 0 <= idx < self.processor.total_frames:
-                    candidate = context[frame_id].get('ball') or {}
-                    if (
-                        candidate.get('x_px') is not None
-                        and candidate.get('y_px') is not None
-                    ):
+                    candidate = context[idx].get('ball') or {}
+                    if (candidate.get('x_px') is not None and candidate.get('y_px') is not None):
                         return candidate
 
         return {'x_px': None, 'y_px': None}

@@ -6,6 +6,8 @@ from utils.consts import COURT_WIDTH
 
 from datetime import datetime
 
+SEARCH_FRAME_PAD = 5
+
 MIN_X_PERCENT = SINGLES_SIDELINE_INSET_M / COURT_WIDTH * 100.0
 MAX_X_PERCENT = (1 - (SINGLES_SIDELINE_INSET_M / COURT_WIDTH)) * 100.0
 
@@ -87,9 +89,26 @@ class Persister:
             'far_player_y': player_coord('far', 1),
         }
 
+    def _get_near_ball(self, frame_id, context):
+            ball = context[frame_id].get('ball') or {}
+            bx = ball.get('x_px')
+            by = ball.get('y_px')
+    
+            if bx is not None and by is not None:
+                return ball
+    
+            for offset in range(1, SEARCH_FRAME_PAD + 1):
+                for idx in (frame_id - offset, frame_id + offset):
+                    if 0 <= idx < self.processor.total_frames:
+                        candidate = context[idx].get('ball') or {}
+                        if (candidate.get('x_px') is not None and candidate.get('y_px') is not None):
+                            return candidate
+    
+            return {'x_px': None, 'y_px': None}
+
     def _infer_hitting_player(self, frame_id, context):
         players = context[frame_id].get('players', {})
-        ball = context[frame_id].get('ball', {})
+        ball = self._get_near_ball(frame_id, context)
         bx, by = ball.get('x_px'), ball.get('y_px')
         if bx is None or by is None:
             return None
