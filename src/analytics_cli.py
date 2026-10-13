@@ -3,10 +3,7 @@ from uuid import UUID
 
 from analytics.report import AnalyticsReport
 
-def start_pass_type(value):
-    if value == "full":
-        return "full"
-    return int(value)
+import analytics.queries.serve
 
 def uuid_type(value):
     try:
