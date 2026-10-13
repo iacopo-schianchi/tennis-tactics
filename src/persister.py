@@ -99,7 +99,7 @@ class Persister:
     
             for offset in range(1, SEARCH_FRAME_PAD + 1):
                 for idx in (frame_id - offset, frame_id + offset):
-                    if 0 <= idx < self.processor.total_frames:
+                    if 0 <= idx < len(context):
                         candidate = context[idx].get('ball') or {}
                         if (candidate.get('x_px') is not None and candidate.get('y_px') is not None):
                             return candidate
