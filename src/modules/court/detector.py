@@ -81,7 +81,7 @@ class CourtDetector:
         print(src_pts)
 
         H = None
-        if src_pts is not None:
+        if np.isfinite(src_pts).all() and src_pts.shape == (4, 2):
             H, _ = cv2.findHomography(src_pts, dst)
 
         if debug:

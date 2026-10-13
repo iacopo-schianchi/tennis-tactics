@@ -190,8 +190,10 @@ def get_boundary_lines(h_clusters, v_clusters, img_w, img_h):
 def get_corners(raw_vert, raw_horiz, img_w, img_h):
     v_clusters = cluster_segments(raw_vert)
     h_clusters = cluster_segments(raw_horiz)
+    print("raw", len(raw_vert), len(raw_horiz), "clusters", len(v_clusters), len(h_clusters))
 
     boundary = get_boundary_lines(h_clusters, v_clusters, img_w, img_h)
+    print("boundary", boundary)
     if boundary is None:
         return None
     near_line, service_line, left_line, right_line = boundary
