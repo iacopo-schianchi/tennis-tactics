@@ -22,10 +22,15 @@ trackernet_model.eval()
 
 class BallDetector:
     window_size = 3
+    max_candidates_per_frame = 5
+    missing_detection_cost = 1.5
+    confidence_cost_weight = 1.0
+    distance_reference_pixels = 50.0
 
     def __init__(self, processor, fps):
         self.processor = processor
         self.fps = fps
+        self.frame_width = None
 
     def image_to_court(self, x, y, H):
         if x is None or y is None or H is None:
@@ -38,7 +43,118 @@ class BallDetector:
         return float(court_pt[0]), float(court_pt[1])
 
     def _clean_detections(self, context):
-        pass # TODO: select best track across all candidates
+        if not context: return
+
+        candidates_by_frame = []
+
+        for frame_context in context:
+            frame_candidates = frame_context.get("ball_candidates", [])
+
+            frame_candidates = sorted(frame_candidates, key=lambda candidate: candidate[2], reverse=True)[:self.max_candidates_per_frame]
+            candidates_by_frame.append(frame_candidates + [None])
+
+        frame_count = len(candidates_by_frame)
+
+        def detection_cost(candidate):
+            if candidate is None:
+                return self.missing_detection_cost
+
+            confidence = np.clip(candidate[2], 1e-6, 1.0)
+
+            return self.confidence_cost_weight * -np.log(confidence)
+
+        def distance_cost(previous_candidate, current_candidate):
+            if (previous_candidate is None or current_candidate is None):
+                return 0.0
+
+            previous_position = np.asarray(previous_candidate[:2], dtype=np.float64)
+            current_position = np.asarray(current_candidate[:2], dtype=np.float64)
+
+            distance_pixels = np.linalg.norm(current_position - previous_position)
+
+            reference_width = getattr(self, "frame_width", None) or 640
+
+            distance_scale = (self.distance_reference_pixels * reference_width / 640.0)
+
+            return float(distance_pixels / distance_scale)
+
+        observation_costs = [
+            [detection_cost(candidate) for candidate in frame_candidates]
+            for frame_candidates in candidates_by_frame
+        ]
+
+        if frame_count == 1:
+            selected_indices = [int(np.argmin(observation_costs[0]))]
+
+        else:
+            path_costs = {
+                candidate_index: observation_cost
+                for candidate_index, observation_cost in enumerate(observation_costs[0])
+            }
+
+            backpointers_by_frame = [{} for _ in range(frame_count)]
+
+            for frame_index in range(1, frame_count):
+                next_path_costs = {}
+                backpointers = {}
+
+                previous_candidates = candidates_by_frame[frame_index - 1]
+                current_candidates = candidates_by_frame[frame_index]
+
+                for current_index, current_candidate in enumerate(current_candidates):
+                    best_path_cost = float("inf")
+                    best_previous_index = None
+
+                    for previous_index, previous_path_cost in (path_costs.items()):
+                        previous_candidate = previous_candidates[previous_index]
+
+                        total_path_cost = previous_path_cost + observation_costs[frame_index][current_index] + distance_cost(previous_candidate, current_candidate)
+
+                        if total_path_cost < best_path_cost:
+                            best_path_cost = total_path_cost
+                            best_previous_index = previous_index
+
+                    next_path_costs[current_index] = best_path_cost
+                    backpointers[current_index] = best_previous_index
+
+                path_costs = next_path_costs
+                backpointers_by_frame[frame_index] = backpointers
+
+            selected_indices = [None] * frame_count
+
+            selected_indices[-1] = min(path_costs, key=path_costs.get)
+
+            for frame_index in range(frame_count - 1, 0, -1):
+                selected_indices[frame_index - 1] = backpointers_by_frame[frame_index][selected_indices[frame_index]]
+
+        for frame_id, (frame_context, frame_candidates, selected_index) in enumerate(zip(context, candidates_by_frame, selected_indices)):
+            selected_candidate = frame_candidates[selected_index]
+
+            if selected_candidate is None:
+                frame_context["ball"] = {
+                    "is_missing": True,
+                    "x": None,
+                    "y": None,
+                    "x_px": None,
+                    "y_px": None,
+                }
+            else:
+                x_px, y_px, confidence = selected_candidate
+
+                homography = (frame_context.get("court") or {}).get("H")
+
+                x, y = self.image_to_court(x_px, y_px, homography)
+
+                frame_context["ball"] = {
+                    "is_missing": x is None or y is None,
+                    "x": x,
+                    "y": y,
+                    "x_px": x_px,
+                    "y_px": y_px,
+                    "confidence": confidence,
+                }
+
+            self.processor.set_context(frame_id, frame_context)
 
     def process(self, frames, frame_id, context):
         x_px, y_px, all_candidates = None, None, []
@@ -61,12 +177,23 @@ class BallDetector:
             "ball_candidates": all_candidates
         }
 
-        if frame_id == self.processor.total_frames - 1: self._clean_detections([*context] + [new_context])
+        if frame_id == self.processor.total_frames - 1:
+            all_context = list(context)
+
+            if frame_id < len(all_context):
+                all_context[frame_id] = {**all_context[frame_id], **new_context}
+            else:
+                all_context.append(new_context)
+
+            self._clean_detections(all_context)
+
+            new_context["ball"] = all_context[frame_id]["ball"]
 
         return new_context
 
     def detect_ball(self, frames):
         orig_h, orig_w, _ = frames[0].shape
+        self.frame_width = orig_w
         H, W = 360, 640
 
         img = cv2.resize(frames[2], (W, H))
@@ -83,13 +210,19 @@ class BallDetector:
 
         heatmap = output.argmax(dim=1).squeeze().cpu().numpy()
         candidate_balls = postprocess(heatmap)
-        if len(candidate_balls) > 0:
-            x_pred, y_pred = candidate_balls[0]
+
+        all_candidates = [
+            (
+                float(candidate_x) * orig_w / W,
+                float(candidate_y) * orig_h / H,
+                float(confidence),
+            )
+            for candidate_x, candidate_y, confidence in candidate_balls
+        ]
+
+        if all_candidates:
+            x_pred, y_pred = all_candidates[0][:2]
         else:
             x_pred, y_pred = None, None
 
-        if x_pred is not None and y_pred is not None:
-            x_pred = x_pred * (orig_w / W)
-            y_pred = y_pred * (orig_h / H)
-
-        return x_pred, y_pred, candidate_balls
+        return x_pred, y_pred, all_candidates
