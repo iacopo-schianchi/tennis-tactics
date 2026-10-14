@@ -200,7 +200,8 @@ class BallDetector:
         img_prev = cv2.resize(frames[1], (W, H))
         img_preprev = cv2.resize(frames[0], (W, H))
 
-        x = np.concatenate((img_preprev, img_prev, img), axis=2)
+        # x = np.concatenate((img_preprev, img_prev, img), axis=2)
+        x = np.concatenate((img, img_prev, img_preprev), axis=2)
         x = x.astype(np.float32) / 255.0
         x = np.transpose(x, (2, 0, 1))
         x = np.expand_dims(x, axis=0)

@@ -23,12 +23,10 @@ def postprocess(feature_map):
 
         peak = float(vals.max())
         mean = float(vals.mean())
-        mass = float(vals.sum())
 
         cx = float((xx[mask] * vals).sum() / vals.sum()) if vals.sum() > 0 else float(x)
         cy = float((yy[mask] * vals).sum() / vals.sum()) if vals.sum() > 0 else float(y)
 
-        score = peak * mean
-        candidates.append((cx, cy, score, dict(peak=peak, mean=mean, mass=mass, r=float(r))))
+        candidates.append((cx, cy, peak * mean))
 
     return sorted(candidates, key=lambda c: c[2], reverse=True)
