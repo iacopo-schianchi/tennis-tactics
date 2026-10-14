@@ -7,6 +7,9 @@ MIN_AREA = 2
 MAX_AREA = 400
 
 def postprocess(feature_map):
+    print("Output shape:", feature_map.shape)
+    print("Output min/max:", feature_map.min().item(), feature_map.max().item())
+
     feature_map = feature_map.reshape((360, 640))
     feature_map = np.clip(feature_map * 255, 0, 255).astype(np.uint8)
 

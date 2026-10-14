@@ -83,7 +83,10 @@ class BallDetector:
 
         heatmap = output.argmax(dim=1).squeeze().cpu().numpy()
         candidate_balls = postprocess(heatmap)
-        x_pred, y_pred = None, None if len(candidate_balls) == 0 else candidate_balls[0]
+        if len(candidate_balls) > 0:
+            x_pred, y_pred = candidate_balls[0]
+        else:
+            x_pred, y_pred = None, None
 
         if x_pred is not None and y_pred is not None:
             x_pred = x_pred * (orig_w / W)
