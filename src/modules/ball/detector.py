@@ -37,25 +37,33 @@ class BallDetector:
 
         return float(court_pt[0]), float(court_pt[1])
 
+    def _clean_detections(self, context):
+        pass # TODO: select best track across all candidates
+
     def process(self, frames, frame_id, context):
-        x_px, y_px = None, None
+        x_px, y_px, all_candidates = None, None, []
         if frame_id >= 2:
-            x_px, y_px = self.detect_ball(frames)
+            x_px, y_px, all_candidates = self.detect_ball(frames)
 
         x, y = None, None
         if x_px is not None and y_px is not None:
             H = context[frame_id].get("court").get('H')
             x, y = self.image_to_court(x_px, y_px, H)
 
-        return {
+        new_context = {
             "ball": {
                 'is_missing': x is None or y is None,
                 'x': x,
                 'y': y,
                 'x_px': x_px,
                 'y_px': y_px
-            }
+            },
+            "ball_candidates": all_candidates
         }
+
+        if frame_id == self.processor.total_frames - 1: self._clean_detections([*context] + [new_context])
+
+        return new_context
 
     def detect_ball(self, frames):
         orig_h, orig_w, _ = frames[0].shape
@@ -74,10 +82,11 @@ class BallDetector:
             output = trackernet_model(torch.from_numpy(x).to(DEVICE))
 
         heatmap = output.argmax(dim=1).squeeze().cpu().numpy()
-        x_pred, y_pred = postprocess(heatmap)
+        candidate_balls = postprocess(heatmap)
+        x_pred, y_pred = None, None if len(candidate_balls) == 0 else candidate_balls[0]
 
         if x_pred is not None and y_pred is not None:
             x_pred = x_pred * (orig_w / W)
             y_pred = y_pred * (orig_h / H)
 
-        return x_pred, y_pred
+        return x_pred, y_pred, candidate_balls
