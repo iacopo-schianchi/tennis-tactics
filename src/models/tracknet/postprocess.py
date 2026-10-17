@@ -3,30 +3,31 @@
 import cv2
 import numpy as np
 
-def postprocess(feature_map):
-    feature_map = (feature_map.reshape((360, 640)) * 255).astype(np.uint8)
-    _, heatmap = cv2.threshold(feature_map, 127, 255, cv2.THRESH_BINARY)
+BALL_PROB_THRESH = 0.5
 
-    # was minDist=1
-    circles = cv2.HoughCircles(heatmap, cv2.HOUGH_GRADIENT, dp=1, minDist=5, param1=50, param2=2, minRadius=2, maxRadius=7)
+def postprocess(ball_prob):
+    ball_prob = ball_prob.reshape((360, 640)).astype(np.float32)
+
+    mask_u8 = (ball_prob > BALL_PROB_THRESH).astype(np.uint8) * 255
+
+    circles = cv2.HoughCircles(mask_u8, cv2.HOUGH_GRADIENT, dp=1, minDist=1, param1=50, param2=2, minRadius=1, maxRadius=7)
     if circles is None: return []
 
-    h, w = feature_map.shape
+    h, w = ball_prob.shape
     yy, xx = np.mgrid[0:h, 0:w]
     candidates = []
     for x, y, r in circles[0]:
         # circular mask around candidate
         mask = (xx - x) ** 2 + (yy - y) ** 2 <= r ** 2
-        vals = feature_map[mask].astype(np.float32) / 255
+        vals = ball_prob[mask]
         if vals.size == 0:
             continue
 
-        peak = float(vals.max())
-        mean = float(vals.mean())
+        s = vals.sum()
+        cx = float((xx[mask] * vals).sum() / s) if s > 0 else float(x)
+        cy = float((yy[mask] * vals).sum() / s) if s > 0 else float(y)
 
-        cx = float((xx[mask] * vals).sum() / vals.sum()) if vals.sum() > 0 else float(x)
-        cy = float((yy[mask] * vals).sum() / vals.sum()) if vals.sum() > 0 else float(y)
-
-        candidates.append((cx, cy, peak * mean))
+        conf = float(vals.max())
+        candidates.append((cx, cy, conf))
 
     return sorted(candidates, key=lambda c: c[2], reverse=True)

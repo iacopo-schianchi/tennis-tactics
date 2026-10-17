@@ -207,10 +207,10 @@ class BallDetector:
         x = np.expand_dims(x, axis=0)
 
         with torch.inference_mode():
-            output = trackernet_model(torch.from_numpy(x).to(DEVICE))
+            probs = trackernet_model(torch.from_numpy(x).to(DEVICE), testing=True)[0]
 
-        heatmap = output.argmax(dim=1).squeeze().cpu().numpy()
-        candidate_balls = postprocess(heatmap)
+        ball_prob = probs[128:].sum(dim=0).cpu().numpy()
+        candidate_balls = postprocess(ball_prob)
 
         all_candidates = [
             (
