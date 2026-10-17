@@ -3,7 +3,7 @@ import numpy as np
 from ultralytics import YOLO
 from utils.consts import COURT_WIDTH, COURT_LENGTH
 
-yolo = YOLO("yolov8n.pt")
+yolo = YOLO("yolov8m.pt") # was yolo8n
 tracker = "bytetrack.yaml"
 
 class PlayerDetector:
@@ -18,14 +18,15 @@ class PlayerDetector:
 
         return {"all_players": players}
 
-    def _detect_players(self, frame, conf=0.35):
+    def _detect_players(self, frame, conf=0.25):
         results = yolo.track(
             frame,
             verbose=False,
             conf=conf,
             tracker=tracker,
             persist=True,
-            classes=[0] # person
+            classes=[0], # person
+            imgsz=1280,
         )
 
         detections = []
