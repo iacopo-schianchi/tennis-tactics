@@ -38,39 +38,21 @@ def get_lines(mask):
     return lines
 
 def split_by_orientation(lines):
-    horiz, vert = [], []
-
-    max_horiz_length = 0
-    max_vert_length = 0
+    vert, horiz = [], []
 
     for line in lines:
         x1, y1, x2, y2 = line.flatten()
-        length = np.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
         angle = abs(np.degrees(np.arctan2(y2 - y1, x2 - x1))) % 180 
 
         # dist from horiz
         horizontal_angle = min(angle, 180 - angle)
 
-        # dist from vert
-        vertical_angle = abs(angle - 90)
-
         if horizontal_angle < HORIZ_ANGLE_THRESH:
-            horiz.append((line.flatten(), length))
-            if length > max_horiz_length:
-                max_horiz_length = length
+            horiz.append(line.flatten())
+        else:
+            vert.append(line.flatten())
 
-        elif vertical_angle < VERT_ANGLE_THRESH:
-            vert.append((line.flatten(), length))
-            if length > max_vert_length:
-                max_vert_length = length
-
-    min_length_h = max_horiz_length * MIN_HORIZ_LENGTH_FRACTION
-    min_length_v = max_vert_length * MIN_VERT_LENGTH_FRACTION
-
-    filtered_horiz = [line for line, length in horiz if length >= min_length_h]
-    filtered_vert = [line for line, length in vert if length >= min_length_v]
-
-    return filtered_vert, filtered_horiz
+    return vert, horiz
 
 def line_to_rho_theta(line):
     x1, y1, x2, y2 = line
@@ -124,6 +106,18 @@ def cluster_segments(segments):
         clusters.append(current_cluster)
 
     return clusters
+
+def cluster_extent(cluster):
+    pts = np.array([p for l in cluster for p in ((l[0], l[1]), (l[2], l[3]))], dtype=np.float32)
+    vx, vy, _, _ = fit_line_through_segments(cluster)
+    proj = pts @ np.array([vx, vy], dtype=np.float32)
+    return float(proj.max() - proj.min())
+
+def filter_clusters(clusters, min_extent_ratio):
+    extents = [(cluster_extent(c), c) for c in clusters]
+    max_extent = max(extents, key=lambda x: x[0])[0] if extents else 0
+
+    return [c for extent, c in extents if extent >= max_extent * min_extent_ratio]
 
 def fit_line_through_segments(cluster):
     points = []
@@ -206,8 +200,8 @@ def get_boundary_lines(h_clusters, v_clusters, img_w, img_h):
 
 # estimate all corners using near baseline and service line
 def get_corners(raw_vert, raw_horiz, img_w, img_h):
-    v_clusters = cluster_segments(raw_vert)
-    h_clusters = cluster_segments(raw_horiz)
+    v_clusters = filter_clusters(cluster_segments(raw_vert), MIN_VERT_LENGTH_FRACTION)
+    h_clusters = filter_clusters(cluster_segments(raw_horiz), MIN_HORIZ_LENGTH_FRACTION)
 
     boundary = get_boundary_lines(h_clusters, v_clusters, img_w, img_h)
     if boundary is None:
