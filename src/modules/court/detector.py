@@ -36,7 +36,7 @@ class CourtDetector:
         hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
         inside = mask > 0
 
-        k = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (13, 13))
+        k = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (31, 31))
         tophat = cv2.morphologyEx(gray, cv2.MORPH_TOPHAT, k)
 
         t, _ = cv2.threshold(tophat[inside].reshape(-1, 1), 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
