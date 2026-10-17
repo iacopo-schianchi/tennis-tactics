@@ -35,9 +35,15 @@ class PlayerFilter:
 
         tracks = self._collect_tracks(context)
         track_scores = self._score_tracks(tracks, n_frames)
-        selected = self._select_players(tracks, track_scores)
+        eligible = self._eligible_tracks(tracks, track_scores)
 
-        return self._interpolate_tracks(selected, tracks, n_frames)
+        return self._select_per_frame(eligible, tracks, track_scores, n_frames)
+
+    def _eligible_tracks(self, tracks, track_scores):
+        return [
+            track_id for track_id, detections in tracks.items()
+            if len(detections) >= 2 and track_scores[track_id]["persist"] >= MIN_PERSISTENCE
+        ]
 
     def _collect_tracks(self, context):
         tracks = {}
@@ -101,21 +107,22 @@ class PlayerFilter:
     def _score_tracks(self, tracks, n_frames):
         return {track_id: self._score_track(detections, n_frames) for track_id, detections in tracks.items()}
 
-    # returns best near, far
-    def _select_players(self, tracks, track_scores):
-        best = {"near": None, "far": None}
+    def _select_per_frame(self, eligible, tracks, track_scores, n_frames):
+        results = {frame_id: {"near": None, "far": None} for frame_id in range(n_frames)}
+        best_score = {frame_id: {"near": -1.0, "far": -1.0} for frame_id in range(n_frames)}
 
-        for track_id, detections in tracks.items():
-            scores = track_scores[track_id]
-            if len(detections) < 2 or scores["persist"] < MIN_PERSISTENCE:
-                continue
+        for track_id in eligible:
+            side = track_scores[track_id]["side"]
+            score = track_scores[track_id]["score"]
 
-            side = scores["side"]
-            current = best[side]
-            if current is None or scores["score"] > track_scores[current]["score"]:
-                best[side] = track_id
+            for frame_id, player in self._fill_gaps(tracks[track_id]).items():
+                if frame_id not in results or score <= best_score[frame_id][side]:
+                    continue
 
-        return best["near"], best["far"]
+                best_score[frame_id][side] = score
+                results[frame_id][side] = self._build_player(side, track_id, player)
+
+        return results
 
     @staticmethod
     def _lerp(a, b, t):
@@ -163,15 +170,3 @@ class PlayerFilter:
             "feet_pct": (x_m / COURT_WIDTH * 100, y_m / COURT_LENGTH * 100),
             "interpolated": player["interpolated"],
         }
-
-    def _interpolate_tracks(self, selected, tracks, n_frames):
-        results = {frame_id: {"near": None, "far": None} for frame_id in range(n_frames)}
-
-        for role, track_id in zip(("near", "far"), selected):
-            if track_id is None:
-                continue
-
-            for frame_id, player in self._fill_gaps(tracks[track_id]).items():
-                results[frame_id][role] = self._build_player(role, track_id, player)
-
-        return results

@@ -38,7 +38,7 @@ class RollingLog:
 
 class VideoProcessor:
     TRACKNET_ASPECT_RATIO = 640 / 360
-    COURT_PADDING_RATIO = 0.1
+    COURT_PADDING_RATIO = 0.15
 
     def __init__(self, far_player, near_player, target_fps=30):
         self.context = []
@@ -105,7 +105,7 @@ class VideoProcessor:
                     ret, frame = cap.retrieve()
                     if not ret:
                         break
-                    points, homography = detector.detect_court(frame)
+                    points, homography = detector.detect_court(frame, debug=True)
                     if points is not None and homography is not None:
                         court = {"points": points, "H": homography}
                         break
