@@ -23,8 +23,8 @@ trackernet_model.eval()
 class BallDetector:
     window_size = 3
     max_candidates_per_frame = 5
-    missing_detection_cost = 1.5
-    confidence_cost_weight = 1.0
+    missing_detection_cost = 0.6 # TODO: tune
+    confidence_cost_weight = 3.0
     distance_reference_pixels = 50.0
 
     def __init__(self, processor, fps):
