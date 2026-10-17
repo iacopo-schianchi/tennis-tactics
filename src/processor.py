@@ -40,9 +40,10 @@ class VideoProcessor:
     TRACKNET_ASPECT_RATIO = 640 / 360
     COURT_PADDING_RATIO = 0.15
 
-    def __init__(self, far_player, near_player, target_fps=30):
+    def __init__(self, far_player, near_player, target_fps=30, broadcast_scoring=False):
         self.context = []
         self.target_fps = target_fps
+        self.broadcast_scoring = broadcast_scoring
 
         self.player_map = {
             'near': near_player,
@@ -281,7 +282,7 @@ class VideoProcessor:
         if persist: self._persist_stats()
 
     def _persist_stats(self):
-        persisted = Persister(self.player_map).persist(self.context)
+        persisted = Persister(self.player_map, broadcast_scoring=self.broadcast_scoring).persist(self.context)
         ClipRepository().save(persisted)
 
     def _run_annotation(self, video_path):

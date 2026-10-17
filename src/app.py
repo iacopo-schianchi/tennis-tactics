@@ -31,6 +31,12 @@ def parse_args():
         default=True,
         help="Persist processed video to Supabase",
     )
+    parser.add_argument(
+        "--broadcast-scoring",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="Enable broadcast scoring",
+    )
     parser.add_argument("--far-id", type=uuid_type, default=None, help="UUID of far player")
     parser.add_argument("--near-id", type=uuid_type, default=None, help="UUID of near player")
     parser.add_argument("--far-name", default="Far Player", help="Name of far player")
@@ -68,5 +74,5 @@ if __name__ == "__main__":
 
     context = None if args.context == 'None' else args.context
 
-    vp = VideoProcessor(far_player, near_player, FPS)
+    vp = VideoProcessor(far_player, near_player, FPS, broadcast_scoring=args.broadcast_scoring)
     vp.process(args.video, context_path=context, start_pass=args.start_pass, persist=args.persist)

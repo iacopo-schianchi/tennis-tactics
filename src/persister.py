@@ -25,9 +25,10 @@ def other(role):
     return 'far' if role == 'near' else 'near'
 
 class Persister:
-    def __init__(self, players, recorded_on=datetime.now().strftime("%Y-%m-%d")):
+    def __init__(self, players, recorded_on=datetime.now().strftime("%Y-%m-%d"), broadcast_scoring=False):
         self.players = dict(players)
         self.recorded_on = recorded_on
+        self.broadcast_scoring = broadcast_scoring
 
     def _find_near_property(self, frame_id, context, fetch_child, role=None):
         for offset in range(SEARCH_FRAME_PAD + 1):
@@ -45,6 +46,30 @@ class Persister:
                     if value is not None:
                         return value
         return None
+
+    # for broadcast clips that end early
+    def _close_at_clip_end(self, active, pending_hit, server_role, clip_id):
+        if not active and pending_hit is not None:
+            active = [pending_hit]
+            server_role = self._mark_serve(pending_hit)
+
+        hits = [e for e in active if e['is_hit']]
+        if not hits or hits[-1]['hitting_player'] is None:
+            return None
+        if not self._is_valid_point(active):
+            return None
+
+        hitter = hits[-1]['hitting_player']
+
+        if active[-1]['is_hit']:
+            # hit, no bounce, clip ends
+            winner, reason = other(hitter), 'unforced_error'
+        else:
+            # hit, bounce on other side, clip ends
+            winner = hitter
+            reason = 'ace' if self._is_ace(active) else 'winner'
+
+        return self._build_point(active, winner, reason, server_role, clip_id)
 
     def _form_event(self, frame_id, context):
         event_context = context[frame_id].get('event') or {}
@@ -267,6 +292,13 @@ class Persister:
             points.append(point)
             events.extend(rows)
             active, server_role, fault_server = [], None, None
+
+        if self.broadcast_scoring:
+            result = self._close_at_clip_end(active, pending_hit, server_role, clip['id'])
+            if result is not None:
+                point, rows = result
+                points.append(point)
+                events.extend(rows)
 
         return {
             'players': self._player_rows(),
