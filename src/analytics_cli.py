@@ -3,7 +3,9 @@ from uuid import UUID
 
 from analytics.report import AnalyticsReport
 
-import analytics.queries.serve
+import analytics.queries.serve.serve_return
+import analytics.queries.serve.ace_rate
+import analytics.queries.serve.serve_placement
 
 def uuid_type(value):
     try:

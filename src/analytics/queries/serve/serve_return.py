@@ -18,7 +18,7 @@ def generate_insight(rows):
 
     out += f"Wins {serve_rate:.0%} of service points and {return_rate:.0%} of return points."
     if gap < 0:
-        return out + " Weakeness: serve is less effective than returning."
+        return out + " Weakness: serve is less effective than returning."
     if gap < 0.10:
         return out + " Weakness: serve gives little edge over returning."
     if return_rate < 0.25:
@@ -30,12 +30,13 @@ register(Query(
     name="win_rate_serving_vs_returning",
     description="Point win rate when serving vs. returning",
     sql="""
-select (server_id = %(player_id)s) as is_server,
-    count(*) as points,
-    count(*) filter (where winner_id = %(player_id)s) as wins
-from points
-where %(player_id)s in (near_player_id, far_player_id) and winner_id is not null
-group by 1
+SELECT
+    (server_id = %(player_id)s) AS is_server,
+    COUNT(*) AS points,
+    COUNT(*) FILTER (WHERE winner_id = %(player_id)s) AS wins
+FROM points
+WHERE %(player_id)s IN (near_player_id, far_player_id) AND winner_id IS NOT NULL
+GROUP BY (server_id = %(player_id)s)
 """,
     generate_insight=generate_insight
 ))

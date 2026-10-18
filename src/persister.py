@@ -1,15 +1,15 @@
 from uuid import uuid4
 
 from modules.court.annotator import SINGLES_SIDELINE_INSET_M
-from modules.metrics.estimator import ShotTypes
 from utils.consts import COURT_WIDTH
 
 from datetime import datetime
 
-SEARCH_FRAME_PAD = 5
+# % coord in pad
+PERCENT_PAD = 1.0
 
-MIN_X_PERCENT = SINGLES_SIDELINE_INSET_M / COURT_WIDTH * 100.0
-MAX_X_PERCENT = (1 - (SINGLES_SIDELINE_INSET_M / COURT_WIDTH)) * 100.0
+MIN_X_PERCENT = SINGLES_SIDELINE_INSET_M / COURT_WIDTH * 100.0 - PERCENT_PAD
+MAX_X_PERCENT = (1 - (SINGLES_SIDELINE_INSET_M / COURT_WIDTH)) * 100.0 + PERCENT_PAD
 
 NET_Y_PERCENT = 50.0
 SEARCH_FRAME_PAD = 5
@@ -85,8 +85,9 @@ class Persister:
         if event_context.get('is_bounce'):
             bounce_x, bounce_y = event_context.get('bounce_coord_pct') or (None, None)
             if bounce_x is not None and bounce_y is not None:
-                is_in_y = 0 <= bounce_y <= 100
+                is_in_y = -PERCENT_PAD <= bounce_y <= 100 + PERCENT_PAD
                 is_in_x = MIN_X_PERCENT <= bounce_x <= MAX_X_PERCENT
+                # full court check only (serves re-judged in persist)
                 is_in = is_in_x and is_in_y
 
         shot_type = context[frame_id].get('shot_type')
@@ -165,6 +166,38 @@ class Persister:
             hit['shot_type'] = 'serve'
             return hit['hitting_player']
         return None
+
+    def _serve_is_in(self, hit, bounce):
+        bounce_x, bounce_y = bounce['bounce_x'], bounce['bounce_y']
+        if bounce_x is None or bounce_y is None:
+            return None
+
+        hitter = hit['hitting_player']
+        side = self._side(bounce_y)
+        # bounce must land on the other side of the net from the server
+        if hitter is None or side is None or side == hitter:
+            return False
+
+        server_x = hit.get(f'{hitter}_player_x')
+        if server_x is None:
+            # fall back to the full court check from _form_event
+            return bounce['is_in']
+
+        if server_x > 50:
+            # deuce court
+            service_x_min, service_x_max = MIN_X_PERCENT, 50 + PERCENT_PAD
+        else:
+            # ad court
+            service_x_min, service_x_max = 50 - PERCENT_PAD, MAX_X_PERCENT
+
+        service_y_min, service_y_max = (
+            (50, 77) if bounce_y > 50 else (23, 50)
+        )
+
+        service_y_min -= PERCENT_PAD
+        service_y_max += PERCENT_PAD
+
+        return service_x_min <= bounce_x <= service_x_max and service_y_min <= bounce_y <= service_y_max
 
     def _is_ace(self, active):
         hits = [event for event in active if event['is_hit']]
@@ -247,7 +280,7 @@ class Persister:
             # ball lost for too long
             anchor = active[-1] if active else pending_hit
             if anchor is not None and frame_id - anchor['_frame'] > MAX_GAP_FRAMES:
-                active, pending_hit, server_role = [], None, None
+                active, pending_hit, server_role, fault_server = [], None, None, None
 
             if not active:
                 if is_hit:
@@ -260,6 +293,8 @@ class Persister:
                 # start point
                 active = [hit, event]
                 server_role = self._mark_serve(hit)
+                if server_role is not None:
+                    event['is_in'] = self._serve_is_in(hit, event)
             elif is_hit:
                 previous = active[-1]
                 hitter = event['hitting_player']
