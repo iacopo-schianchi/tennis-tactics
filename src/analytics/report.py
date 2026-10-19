@@ -34,17 +34,20 @@ class AnalyticsReport:
 
         return result
 
-    def print_report(self, report, print_rows=False):
+    def get_report_string(self, report, print_rows=False):
+        out = ""
         for result in report.values():
-            print(f"\n--- {result.name} ---")
-            print(result.description)
+            out += f"\n--- {result.name} ---\n"
+            out += f"{result.description}\n"
             if result.error:
-                print(f"Error: {result.error}")
+                out += f"Error: {result.error}\n"
                 continue
 
             if print_rows:
                 for row in result.rows:
-                    print(row)
+                    out += f"{row}\n"
 
             if result.insight:
-                print(f"\nInsight: {result.insight}")
+                out += f"\nInsight: {result.insight}\n"
+
+        return out

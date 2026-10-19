@@ -18,6 +18,9 @@ import analytics.queries.sequences.shot_sequence_effectiveness
 
 import analytics.queries.positioning.position_depth_stats
 
+from analytics.llm.prompts import REPORT_SYNTHESIZER_SYS
+from analytics.llm.model import Model
+
 def uuid_type(value):
     try:
         return str(UUID(value))
@@ -38,4 +41,16 @@ if __name__ == "__main__":
 
     # TODO: handle natural language query
 
-    ar.print_report(report)
+    report_str = ar.get_report_string(report)
+    print(report_str)
+
+    print("Loading model...")
+
+    report_synthesizer = Model(system_prompt=REPORT_SYNTHESIZER_SYS)
+
+    print("Synthesizing report...")
+    
+    synthesized_report = report_synthesizer.get_response(f"Generate a synthesized report for this player:\n\n{report_str}", max_new_tokens=1024, thinking=True)
+
+    print("\n--- Synthesized Report ---")
+    print(synthesized_report)
