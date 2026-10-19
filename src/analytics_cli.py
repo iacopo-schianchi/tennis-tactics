@@ -6,6 +6,17 @@ from analytics.report import AnalyticsReport
 import analytics.queries.serve.serve_return
 import analytics.queries.serve.ace_rate
 import analytics.queries.serve.serve_placement
+import analytics.queries.serve.serve_speed
+
+import analytics.queries.strokes.end_stroke
+import analytics.queries.strokes.stroke_distribution
+import analytics.queries.strokes.distance_for_winner
+
+import analytics.queries.sequences.shot_return_type_distribution
+import analytics.queries.sequences.rally_length_stats
+import analytics.queries.sequences.shot_sequence_effectiveness
+
+import analytics.queries.positioning.position_depth_stats
 
 def uuid_type(value):
     try:
