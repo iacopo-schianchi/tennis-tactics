@@ -34,7 +34,7 @@ class AnalyticsReport:
 
         return result
 
-    def print_report(self, report, print_rows=True):
+    def print_report(self, report, print_rows=False):
         for result in report.values():
             print(f"\n--- {result.name} ---")
             print(result.description)

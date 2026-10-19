@@ -163,7 +163,7 @@ zoned AS (
         s.*,
         rc.is_left,
         rc.handedness_known,
-        -- landing depth on the player_id's side, as % of the half court from the net
+        -- landing depth on the player_id's side, as percent of the half court from the net
         CASE WHEN recv_is_near THEN (a_y - 50) * 2 ELSE (50 - a_y) * 2 END AS a_depth,
         CASE WHEN recv_is_near THEN (b_y - 50) * 2 ELSE (50 - b_y) * 2 END AS b_depth
     FROM sequences s

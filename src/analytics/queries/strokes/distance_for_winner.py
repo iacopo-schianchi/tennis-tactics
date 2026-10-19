@@ -126,7 +126,7 @@ shots AS (
 measured AS (
     SELECT
         s.*,
-        -- landing depth on the receiver's side, as % of the half court from the net
+        -- landing depth on the receiver's side, as percent of the half court from the net
         CASE
             WHEN bounce_y IS NULL THEN NULL
             WHEN hitter_is_near THEN (50 - bounce_y) * 2

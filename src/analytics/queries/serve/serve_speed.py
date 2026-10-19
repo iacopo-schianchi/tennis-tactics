@@ -25,7 +25,7 @@ SELECT
     AVG(events.shot_speed) AS avg_serve_speed,
     COUNT(*) AS serves_counted
 FROM events
-WHERE events.hitting_player_id = :player_id
+WHERE events.hitting_player_id = %(player_id)s
     AND events.is_hit = TRUE
     AND LOWER(events.shot_type) = 'serve'
     AND events.shot_speed IS NOT NULL
