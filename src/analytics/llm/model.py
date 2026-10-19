@@ -40,7 +40,7 @@ class Model:
             enable_thinking=thinking,
         )
 
-        inputs = self.tokenzier(formatted_prompt, return_tensors="pt").to(self.model.device)
+        inputs = self.tokenizer(formatted_prompt, return_tensors="pt").to(self.model.device)
 
         with torch.inference_mode():
             output = self.model.generate(
