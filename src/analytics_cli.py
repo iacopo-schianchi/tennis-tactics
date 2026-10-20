@@ -33,6 +33,9 @@ def parse_args():
     parser.add_argument("--query", default=None, help="Tactical query for multi-agent LLM system")
     return parser.parse_args()
 
+# for report synthesizer context
+FILTERED_QUERIES = ['reply_direction_by_incoming_shot', 'winner_rate_by_trajectory_distance']
+
 if __name__ == "__main__":
     args = parse_args()
 
@@ -41,8 +44,8 @@ if __name__ == "__main__":
 
     # TODO: handle natural language query
 
-    report_str = ar.get_report_string(report)
-    print(report_str)
+    full_report, filtered_report = ar.get_report_string(report, filtered_queries=FILTERED_QUERIES)
+    print(full_report)
 
     print("Loading model...")
 
@@ -50,7 +53,7 @@ if __name__ == "__main__":
 
     print("Synthesizing report...")
     
-    synthesized_report = report_synthesizer.get_response(f"Generate a synthesized report for this player:\n\n{report_str}", max_new_tokens=1024, thinking=True)
+    synthesized_report = report_synthesizer.get_response(f"Generate a synthesized report for this player:\n\n{filtered_report}", max_new_tokens=1024, thinking=True)
 
     print("\n--- Synthesized Report ---")
     print(synthesized_report)

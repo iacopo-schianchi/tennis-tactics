@@ -16,7 +16,7 @@ class Model:
         self.model = AutoModelForCausalLM.from_pretrained(
             name,
             quantization_config=bnb_config,
-            device_map="auto"
+            device_map="auto",
         )
 
         self.model.eval()

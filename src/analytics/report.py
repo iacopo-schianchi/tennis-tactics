@@ -34,20 +34,24 @@ class AnalyticsReport:
 
         return result
 
-    def get_report_string(self, report, print_rows=False):
-        out = ""
+    # full report, filtered report
+    def get_report_string(self, report, print_rows=False, filtered_queries=[]):
+        full_out, filtered_out = ""
         for result in report.values():
-            out += f"\n--- {result.name} ---\n"
-            out += f"{result.description}\n"
+            diff = f"\n--- {result.name} ---\n{result.description}\n"
+
             if result.error:
-                out += f"Error: {result.error}\n"
+                diff += f"Error: {result.error}\n"
                 continue
 
             if print_rows:
                 for row in result.rows:
-                    out += f"{row}\n"
+                    diff += f"{row}\n"
 
             if result.insight:
-                out += f"\nInsight: {result.insight}\n"
+                diff += f"\nInsight: {result.insight}\n"
 
-        return out
+            full_out += diff
+            if result.name not in filtered_queries: filtered_out += diff
+
+        return full_out, filtered_out
