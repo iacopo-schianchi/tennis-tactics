@@ -55,7 +55,7 @@ def parse_args():
     )
     parser.add_argument(
         "--ball-only",
-        action=argparse.BooleanOptionAction,
+        action=argparse.BooleanOptionalAction,
         default=False,
         help="Process ball only"
     )
