@@ -36,7 +36,7 @@ class AnalyticsReport:
 
     # full report, filtered report
     def get_report_string(self, report, print_rows=False, filtered_queries=[]):
-        full_out, filtered_out = ""
+        full_out, filtered_out = "", ""
         for result in report.values():
             diff = f"\n--- {result.name} ---\n{result.description}\n"
 
