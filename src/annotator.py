@@ -28,13 +28,17 @@ def json_default(obj):
     raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
 
 class VideoAnnotator:
-    def __init__(self, context, fps=30, stride=1):
+    # ball_only: temporarily only annotate ball
+    def __init__(self, context, fps=30, stride=1, ball_only=False):
         self.context = context
         self.annotators = [
             CourtAnnotator(),
             BallAnnotator(),
             MetricAnnotator(),
             PlayerAnnotator(),
+        ] if not ball_only else [
+            CourtAnnotator(),
+            BallAnnotator(),
         ]
         self.fps = fps
         self.stride = stride

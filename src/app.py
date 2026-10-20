@@ -53,6 +53,12 @@ def parse_args():
         default=None,
         help="Handedness of near player",
     )
+    parser.add_argument(
+        "--ball-only",
+        action=argparse.BooleanOptionAction,
+        default=False,
+        help="Process ball only"
+    )
     return parser.parse_args()
 
 if __name__ == "__main__":
@@ -74,5 +80,5 @@ if __name__ == "__main__":
 
     context = None if args.context == 'None' else args.context
 
-    vp = VideoProcessor(far_player, near_player, FPS, broadcast_scoring=args.broadcast_scoring)
+    vp = VideoProcessor(far_player, near_player, FPS, broadcast_scoring=args.broadcast_scoring, ball_only=args.ball_only)
     vp.process(args.video, context_path=context, start_pass=args.start_pass, persist=args.persist)

@@ -40,7 +40,8 @@ class VideoProcessor:
     TRACKNET_ASPECT_RATIO = 640 / 360
     COURT_PADDING_RATIO = 0.15
 
-    def __init__(self, far_player, near_player, target_fps=30, broadcast_scoring=False):
+    # ball_only: temporarily only run ball detection algorithm
+    def __init__(self, far_player, near_player, target_fps=30, broadcast_scoring=False, ball_only=False):
         self.context = []
         self.target_fps = target_fps
         self.broadcast_scoring = broadcast_scoring
@@ -50,9 +51,18 @@ class VideoProcessor:
             'far': far_player
         }
         self.crop_bounds = None
+        self.ball_only = ball_only
 
     def _build_passes(self):
         # each pass processes frames -> updates context
+        if self.ball_only:
+            self.passes = [
+                (BallDetector(self, self.fps),),
+                (BallKinematics(self, self.fps),),
+                (EventDetector(),)
+            ]
+            return
+
         self.passes = [
             (
                 PlayerDetector(self.player_map),
@@ -286,7 +296,7 @@ class VideoProcessor:
         ClipRepository().save(persisted)
 
     def _run_annotation(self, video_path):
-        annotator = VideoAnnotator(self.context, self.fps, self.stride)
+        annotator = VideoAnnotator(self.context, self.fps, self.stride, ball_only=self.ball_only)
         annotator.render(video_path)
 
     def _run_perception(self, frames, frame_id, modules):
