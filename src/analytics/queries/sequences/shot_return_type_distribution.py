@@ -67,7 +67,7 @@ def _rank(row):
     return kind, depth_pos, lateral_pos
 
 
-def response_insight(rows):
+def response_insight(rows, condensed=False):
     if not rows or not any(row["n"] for row in rows): return "No rally balls received by this player were recorded."
 
     groups = {}
@@ -87,6 +87,7 @@ def response_insight(rows):
         else: out += f"\n{stroke.capitalize()} replies ({total} replies{warning}):"
 
         for cell in sorted(cells, key=_rank):
+            if condensed and (cell["incoming_depth"] is not None or cell["incoming_lateral"] is not None): continue
             n = cell["n"]
             low = ", low sample" if n < LOW_BUCKET_COUNT else ""
             returned = cell["returned_n"]

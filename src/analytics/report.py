@@ -13,8 +13,9 @@ class QueryResult:
     error: str | None = None
 
 class AnalyticsReport:
-    def __init__(self, player_id):
+    def __init__(self, player_id, condensed_queries):
         self.player_id = player_id
+        self.condensed_queries = condensed_queries
 
     def generate_report(self):
         report = {}
@@ -27,7 +28,9 @@ class AnalyticsReport:
 
         try:
             result.rows = run_sql(query.sql, {"player_id": self.player_id})
-            if query.generate_insight is not None:
+            if query.generate_insight is not None and query.name in self.condensed_queries:
+                result.insight = query.generate_insight(result.rows, True)
+            elif query.generate_insight is not None:
                 result.insight = query.generate_insight(result.rows)
         except Exception as error:
             result.error = str(error)
