@@ -48,7 +48,7 @@ if __name__ == "__main__":
 
     print("Loading model...")
 
-    model = Model()
+    model = Model(local=False)
 
     report_synthesizer = Agent(model, "report_synthesizer", REPORT_SYNTHESIZER_SYS, stateless=True, max_new_tokens=2048, thinking=True)
 
