@@ -58,3 +58,6 @@ if __name__ == "__main__":
 
     print("\n--- Synthesized Report ---")
     print(synthesized_report)
+
+    with open("./analytics/llm/synthesized_report.txt", "w") as file:
+        file.write(synthesized_report)

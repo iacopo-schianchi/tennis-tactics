@@ -1,7 +1,7 @@
 import json
 import os
 
-DEFAULT_HISTORY_PATH = "chat_history.json"
+DEFAULT_HISTORY_PATH = "./chat_history.json"
 
 
 class Agent:
