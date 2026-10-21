@@ -41,12 +41,13 @@ Decide which data is needed to answer the user's question. Your context has the 
 Return ONLY a JSON object:
 {"action": "report_only" | "fetch" | "cannot_answer",
  "reason": "<one sentence>",
- "queries": [{"source": "registry", "name": "<registry query name>"}, {"source": "new", "description": "<plain text description of the data to fetch>"}]}
+ "queries": [{"source": "registry", "name": "<registry query name>"}, {"source": "new", "description": "<plain text description of the data to fetch with specific details on the requirements>"}]}
 Rules:
 - report_only: the existing report already has what is needed. queries must be empty.
 - fetch: prefer registry queries. Use "new" only if no registry query fits, and describe precisely what to compute (filters, grouping, metric). At most 4 queries.
 - cannot_answer: the schema and registry cannot provide the data. Say what is missing in reason.
-- Never repeat queries listed as already fetched."""
+- Never repeat queries listed as already fetched.
+- In a description of a new query, be specific regarding what the query needs to accomplish, what fields it should use, and how it should use them."""
 
 SQL_GEN_SYS = """You write one PostgreSQL query for a tennis analytics database. Your context has the schema and the conventions.
 Rules:
