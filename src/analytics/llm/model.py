@@ -1,5 +1,6 @@
 import gc
 import re
+import os
 
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
@@ -57,7 +58,7 @@ class Model:
         )
 
         if not local:
-            self.client = genai.Client()
+            self.client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
             return
 
         self.tokenizer = AutoTokenizer.from_pretrained(self.name)
