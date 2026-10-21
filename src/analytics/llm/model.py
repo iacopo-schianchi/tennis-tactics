@@ -25,19 +25,19 @@ class Model:
     _instances = {}
 
     @classmethod
-    def get(cls, name="Qwen/Qwen3-8B"):
+    def get(cls, name="QQwen/Qwen3.5-9B"):
         if name not in cls._instances:
             cls._instances[name] = cls(name)
         return cls._instances[name]
 
     @classmethod
-    def unload(cls, name="Qwen/Qwen3-8B"):
+    def unload(cls, name="Qwen/Qwen3.5-9B"):
         cls._instances.pop(name, None)
         gc.collect()
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
 
-    def __init__(self, name="Qwen/Qwen3-8B"):
+    def __init__(self, name="Qwen/Qwen3.5-9B"):
         self.tokenizer = AutoTokenizer.from_pretrained(name)
         self.model = AutoModelForCausalLM.from_pretrained(
             name,

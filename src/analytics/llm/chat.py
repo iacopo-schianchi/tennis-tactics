@@ -66,6 +66,7 @@ def main():
     while True:
         try:
             question = input("> ").strip()
+            print("Reasoning...")
         except EOFError:
             break
         if not question:
