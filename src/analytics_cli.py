@@ -20,6 +20,7 @@ import analytics.queries.positioning.position_depth_stats
 
 from analytics.llm.prompts import REPORT_SYNTHESIZER_SYS
 from analytics.llm.model import Model
+from analytics.llm.agent import Agent
 
 def uuid_type(value):
     try:
@@ -42,18 +43,18 @@ if __name__ == "__main__":
     ar = AnalyticsReport(args.player_id, condensed_queries=CONDENSED_QUERIES)
     report = ar.generate_report()
 
-    # TODO: handle natural language query
-
     full_report, _ = ar.get_report_string(report)
     print(full_report)
 
     print("Loading model...")
 
-    report_synthesizer = Model(system_prompt=REPORT_SYNTHESIZER_SYS)
+    model = Model()
+
+    report_synthesizer = Agent(model, "report_synthesizer", REPORT_SYNTHESIZER_SYS, stateless=True, max_new_tokens=2048, thinking=True)
 
     print("Synthesizing report...")
     
-    synthesized_report = report_synthesizer.get_response(f"Generate a synthesized report for this player:\n\n{full_report}", max_new_tokens=2048, thinking=True)
+    synthesized_report = report_synthesizer.ask(f"Generate a synthesized report for this player:\n\n{full_report}")
 
     print("\n--- Synthesized Report ---")
     print(synthesized_report)
