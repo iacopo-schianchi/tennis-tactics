@@ -27,7 +27,7 @@ def parse_args():
     parser.add_argument("--query", default=None, help="Question. Omit for an interactive session")
     parser.add_argument("--report-file", default="./src/analytics/llm/synthesized_report.txt", help="Synthesized report text, stored as the synthesizer's context")
     parser.add_argument("--schema-file", default="./src/analytics/llm/schema.sql")
-    parser.add_argument("--dsn", default=os.environ.get("DATABASE_URL"))
+    parser.add_argument("--dsn", default=os.environ.get("SUPABASE_DB_URL"))
     parser.add_argument("--history", default=DEFAULT_HISTORY_PATH)
     parser.add_argument("--reset", action="store_true", help="Clear the chat history and report first")
     parser.add_argument("-v", "--verbose", action="store_true", help="Log plans, SQL attempts and verdicts")
