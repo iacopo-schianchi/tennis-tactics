@@ -51,6 +51,7 @@ Rules:
 SQL_GEN_SYS = """You write one PostgreSQL query for a tennis analytics database. Your context has the schema and the conventions.
 Rules:
 - One read-only statement that starts with SELECT or WITH, no semicolon.
+- Make sure the code is accurate and functions correctly.
 - Use %(player_id)s for the player. No other parameters.
 - Aggregate in SQL, return few rows, name the columns clearly.
 - Reply with the SQL in a single ```sql block and nothing else.
@@ -58,6 +59,7 @@ If you are given a previous query and a problem, fix that problem."""
 
 VERIFIER_SYS = """You review a PostgreSQL query written for a tennis analytics database. Your context has the schema and the conventions.
 Check that the query answers the requested data: correct tables and columns, filtered to the player, hitter and receiver handled correctly, units and coordinate conventions respected, every rate has a sensible denominator. Use the sample rows as evidence.
+In your explanation, be as specific as possible in the suggested fixes, including explicitly listing query changes for it to function if it does not already.
 Return ONLY a JSON object: {"correct": true | false, "explanation": "<what is wrong and how to fix it, or why it is right>"}"""
 
 SUFFICIENCY_SYS = """You decide whether fetched data is enough to answer a question about a tennis player.

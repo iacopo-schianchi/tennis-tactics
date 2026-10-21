@@ -120,7 +120,7 @@ class MultiAgent:
 
         # agents
         self.planner = Agent(model, "planner", P.PLANNER_SYS, stateless=True, max_new_tokens=512)
-        self.sql_gen = Agent(model, "sql_generator", P.SQL_GEN_SYS, stateless=True, max_new_tokens=768)
+        self.sql_gen = Agent(model, "sql_generator", P.SQL_GEN_SYS, stateless=True, max_new_tokens=2048, thinking=True)
         self.verifier = Agent(model, "verifier", P.VERIFIER_SYS, stateless=True, max_new_tokens=384)
         self.sufficiency = Agent(model, "sufficiency", P.SUFFICIENCY_SYS, stateless=True, max_new_tokens=256)
         self.synth = Agent(model, "synthesizer", P.SYNTH_SYS, history_path=history_path, max_new_tokens=768)
