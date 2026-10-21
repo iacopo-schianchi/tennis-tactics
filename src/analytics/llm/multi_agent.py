@@ -328,4 +328,4 @@ class MultiAgent:
             prompt += "\n\nNot available:\n" + "\n".join(f"- {f['title']}: {f['error'][:200]}" for f in failures)
 
         # q/a in stored history
-        return self.synth.ask(prompt, store=question)
+        return self.synth.ask(prompt)
