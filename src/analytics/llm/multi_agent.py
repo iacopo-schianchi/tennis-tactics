@@ -249,7 +249,7 @@ class MultiAgent:
                     results.append(self._run_new(title))
             except Exception as e:
                 log.warning("query %s failed: %s", title, e)
-                failures.append({"title": title, "error": str()
+                failures.append({"title": title, "error": str()})
         return attempted
 
     def _run_registry(self, name):
