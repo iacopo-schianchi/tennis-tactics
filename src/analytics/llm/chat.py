@@ -7,7 +7,7 @@ from analytics.llm.db import PostgresRunner
 from analytics.llm.model import Model
 from analytics.llm.multi_agent import MultiAgent
 
-# registry queries whose insight is called with shorten=True
+# registry queries whose insight is called with condensed=True
 CONDENSED_QUERIES = ['reply_direction_by_incoming_shot']
 
 

@@ -256,7 +256,7 @@ class MultiAgent:
         query = self.queries[name]
         rows = self.run_sql(query.sql, self._params)
         if name in self.condensed:
-            text = query.generate_insight(rows, shorten=True)
+            text = query.generate_insight(rows, condensed=True)
         else:
             text = query.generate_insight(rows)
         return {"title": name, "source": "registry", "text": text}
