@@ -3,7 +3,7 @@ import logging
 import re
 from decimal import Decimal
 
-from analytics.llm import multi_prompts as P
+from analytics.llm import prompts as P
 from analytics.llm.agent import DEFAULT_HISTORY_PATH, Agent
 
 log = logging.getLogger("multi_agent")
