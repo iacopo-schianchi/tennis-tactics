@@ -1,7 +1,7 @@
 import json
 import os
 
-DEFAULT_HISTORY_PATH = "./src/analytics/llm/chat_history.json"
+DEFAULT_HISTORY_PATH = "chat_history.json"
 
 
 class Agent:
@@ -19,6 +19,8 @@ class Agent:
         self.turns = []
         if not stateless:
             self._load()
+
+    # persistence
 
     def _read_file(self):
         if not self.history_path or not os.path.exists(self.history_path):
@@ -44,6 +46,8 @@ class Agent:
             json.dump(data, f, indent=2)
         os.replace(tmp, self.history_path)
 
+    # state
+
     def set_context(self, text):
         self.context = text
         self.save()
@@ -61,15 +65,20 @@ class Agent:
         turns = self.turns[-2 * self.max_turns:] if self.max_turns else self.turns
         return [{"role": "system", "content": system}, *turns, *(extra or [])]
 
-    def ask(self, prompt):
-        user = {"role": "user", "content": prompt}
+    # chat
 
+    def record(self, prompt, reply):
+        if self.stateless:
+            return
+        self.turns += [{"role": "user", "content": prompt}, {"role": "assistant", "content": reply}]
+        self.save()
+
+    def ask(self, prompt, store=None):
+        user = {"role": "user", "content": prompt}
         reply = self.model.generate(
             self.messages([user]),
             max_new_tokens=self.max_new_tokens,
             thinking=self.thinking,
         )
-        if not self.stateless:
-            self.turns += [user, {"role": "assistant", "content": reply}]
-            self.save()
+        self.record(prompt if store is None else store, reply)
         return reply
