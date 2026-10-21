@@ -32,6 +32,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--player-id", type=uuid_type, default=None, help="UUID of far player")
     parser.add_argument("--query", default=None, help="Tactical query for multi-agent LLM system")
+    parser.add_argument("--use-local-llm", action=argparse.BooleanOptionalAction, default=False, help="Load local LLM for chat functionality.")
     return parser.parse_args()
 
 # condense full insight output
@@ -48,7 +49,7 @@ if __name__ == "__main__":
 
     print("Loading model...")
 
-    model = Model(local=False)
+    model = Model(local=args.use_local_llm)
 
     report_synthesizer = Agent(model, "report_synthesizer", REPORT_SYNTHESIZER_SYS, stateless=True, max_new_tokens=2048, thinking=True)
 
