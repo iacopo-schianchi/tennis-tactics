@@ -6,6 +6,9 @@ from decimal import Decimal
 from analytics.llm import prompts as P
 from analytics.llm.agent import DEFAULT_HISTORY_PATH, Agent
 
+import sqlglot
+from sqlglot import exp
+
 log = logging.getLogger("multi_agent")
 
 MAX_QUERIES = 4
@@ -20,12 +23,13 @@ MAX_ROWS_SHOWN = 30
 VERIFIER_SAMPLE_ROWS = 5
 HISTORY_EXCHANGES = 3
 
-# block writing commands
-FORBIDDEN = re.compile(
-    r"\b(insert|update|delete|drop|alter|create|grant|revoke|truncate|copy|call|execute|vacuum|into)\b|\bpg_\w+",
-    re.IGNORECASE,
+ALLOWED_TABLES = {"players", "clips", "points", "events"}
+BANNED_NODES = tuple(
+    getattr(exp, name) for name in
+    ("Insert", "Update", "Delete", "Merge", "Create", "Drop", "Alter", "Command", "Into", "TruncateTable", "Copy", "Set")
+    if hasattr(exp, name)
 )
-
+BANNED_FUNCTION_PREFIXES = ("pg_", "lo_", "dblink")
 
 def extract_json(text):
     start = text.find("{")
@@ -67,33 +71,34 @@ def validate_sql(sql):
     sql = sql.strip().rstrip(";").strip()
     if not sql:
         raise ValueError("empty query")
-    if ";" in sql:
+    try:
+        statements = [s for s in sqlglot.parse(sql, read="postgres") if s is not None]
+    except sqlglot.errors.SqlglotError as e:
+        raise ValueError(f"SQL syntax error: {str(e)[:300]}")
+    if len(statements) != 1:
         raise ValueError("only a single statement is allowed")
-    if not re.match(r"(?is)^(select|with)\b", sql):
-        raise ValueError("the query must start with SELECT or WITH")
-    bad = FORBIDDEN.search(sql)
-    if bad:
-        raise ValueError(f"forbidden keyword: {bad.group(0)}")
-    params = set(re.findall(r"%\((\w+)\)s", sql))
+
+    tree = statements[0]
+    if not isinstance(tree, exp.Query):
+        raise ValueError(f"the query must be a SELECT, not {type(tree).__name__}")
+    bad = tree.find(*BANNED_NODES)
+    if bad is not None:
+        raise ValueError(f"not allowed in a read-only query: {type(bad).__name__}")
+    for fn in tree.find_all(exp.Anonymous):
+        if fn.name.lower().startswith(BANNED_FUNCTION_PREFIXES):
+            raise ValueError(f"function not allowed: {fn.name}")
+
+    cte_names = {cte.alias for cte in tree.find_all(exp.CTE)}
+    for table in tree.find_all(exp.Table):
+        if not isinstance(table.this, exp.Identifier):
+            continue
+        if table.db or (table.name not in ALLOWED_TABLES and table.name not in cte_names):
+            raise ValueError(f"unknown table: {table.sql(dialect='postgres')}. Use only {sorted(ALLOWED_TABLES)}")
+
+    params = {p.name for p in tree.find_all(exp.Placeholder)}
     if params != {"player_id"}:
         raise ValueError("the query must use %(player_id)s and no other parameters")
     return sql
-
-
-def format_rows(rows, max_rows=MAX_ROWS_SHOWN):
-    if not rows:
-        return "(no rows returned)"
-
-    def fmt(value):
-        if isinstance(value, (float, Decimal)):
-            return f"{round(float(value), 3):g}"
-        return "NULL" if value is None else str(value)
-
-    cols = list(rows[0].keys())
-    lines = [" | ".join(cols)] + [" | ".join(fmt(row[c]) for c in cols) for row in rows[:max_rows]]
-    if len(rows) > max_rows:
-        lines.append(f"(showing the first {max_rows} of {len(rows)} rows)")
-    return "\n".join(lines)
 
 
 def render_results(results, budget):
