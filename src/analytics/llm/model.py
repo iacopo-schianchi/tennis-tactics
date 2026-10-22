@@ -70,6 +70,7 @@ class Model:
         self.model.eval()
 
     def generate(self, messages, max_new_tokens=512, thinking=False):
+        print(self.name, messages)
         if not self.local:
             contents = []
             system_instruction = []
