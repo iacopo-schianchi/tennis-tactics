@@ -158,8 +158,8 @@ class MultiAgent:
         self.last_trace = None
 
         # agents
-        self.planner = Agent(model, "planner", P.PLANNER_SYS, stateless=True, thinking="medium", max_new_tokens=512, json_schema=plan_schema(self.queries))
-        self.sql_gen = Agent(model, "sql_generator", P.SQL_GEN_SYS, stateless=True, thinking="high", max_new_tokens=768)
+        self.planner = Agent(model, "planner", P.PLANNER_SYS, stateless=True, thinking="MEDIUM", max_new_tokens=512, json_schema=plan_schema(self.queries))
+        self.sql_gen = Agent(model, "sql_generator", P.SQL_GEN_SYS, stateless=True, thinking="HIGH", max_new_tokens=768)
         self.verifier = Agent(model, "verifier", P.VERIFIER_SYS, stateless=True, max_new_tokens=384, json_schema=VERDICT_SCHEMA)
         self.sufficiency = Agent(model, "sufficiency", P.SUFFICIENCY_SYS, stateless=True, max_new_tokens=256, json_schema=SUFFICIENCY_SCHEMA)
         self.synth = Agent(model, "synthesizer", P.SYNTH_SYS, history_path=history_path, max_new_tokens=768)
