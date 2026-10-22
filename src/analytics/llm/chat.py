@@ -32,6 +32,7 @@ def parse_args():
     parser.add_argument("--reset", action="store_true", help="Clear the chat history and report first")
     parser.add_argument("--use-local-llm", action=argparse.BooleanOptionalAction, default=False, help="Load local LLM for chat functionality.")
     parser.add_argument("-v", "--verbose", action="store_true", help="Log plans, SQL attempts and verdicts")
+    parser.add_argument("--model-name" default=None, help="Model used for chat functionality.")
     return parser.parse_args()
 
 
@@ -47,7 +48,7 @@ def main():
             report = f.read()
 
     system = MultiAgent(
-        Model(local=args.use_local_llm),
+        Model(name=args.model_name, local=args.use_local_llm),
         PostgresRunner(args.dsn),
         load_queries(),
         schema,
