@@ -56,7 +56,7 @@ Rules:
 - Make sure the code is accurate and functions correctly.
 - Use %(player_id)s for the player. No other parameters.
 - Aggregate in SQL, return few rows, name the columns clearly.
-- Reply with the SQL in a single ```sql block and nothing else.
+- Reply with the SQL code alone and nothing else. Do not add a ```sql block or anything beyond the query itself.
 If you are given a previous query and a problem, fix that problem."""
 
 VERIFIER_SYS = """You review a PostgreSQL query written for a tennis analytics database. Your context has the schema and the conventions.
