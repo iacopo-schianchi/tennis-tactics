@@ -44,6 +44,21 @@ def extract_json(text):
     return obj
 
 
+def format_rows(rows, max_rows=MAX_ROWS_SHOWN):
+    if not rows: return "(no rows returned)"
+
+    def fmt(value):
+        if isinstance(value, (float, Decimal)):
+            return f"{round(float(value), 3):g}"
+        return "NULL" if value is None else str(value)
+
+    cols = list(rows[0].keys())
+    lines = [" | ".join(cols)] + [" | ".join(fmt(row[c]) for c in cols) for row in rows[:max_rows]]
+    if len(rows) > max_rows:
+        lines.append(f"(showing the first {max_rows} of {len(rows)} rows)")
+    return "\n".join(lines)
+
+
 def ask_json(agent, prompt, validate=None, retries=MAX_JSON_RETRIES):
     current, error = prompt, None
     for _ in range(retries + 1):
