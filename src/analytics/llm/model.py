@@ -15,7 +15,7 @@ bnb_config = BitsAndBytesConfig(
 
 THINK_RE = re.compile(r"<think>.*?</think>", re.DOTALL)
 
-GOOGLE_API_DEFAULT_MODEL = "gemini-3.5-flash-lite"
+GOOGLE_API_DEFAULT_MODEL = "gemini-3.8-flash"
 LOCAL_DEFAULT_MODEL = "Qwen/Qwen3-8B"
 
 def strip_think(text):
