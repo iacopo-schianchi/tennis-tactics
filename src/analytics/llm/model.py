@@ -5,6 +5,7 @@ import os
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 from google import genai
+from google.genai import types
 
 bnb_config = BitsAndBytesConfig(
     load_in_4bit=True,
@@ -94,7 +95,7 @@ class Model:
                 config["response_schema"] = json_schema
             
             if thinking is not None:
-                config["thinking_config"] = {"thinking_level": thinking}
+                config["thinking_config"] = types.ThinkingConfig(thinking_level=thinking)
 
             if system_instruction:
                 config["system_instruction"] = "\n\n".join(system_instruction)
