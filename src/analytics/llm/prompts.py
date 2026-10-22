@@ -45,7 +45,7 @@ Return ONLY a JSON object:
 Rules:
 - report_only: the existing report already has what is needed. queries must be empty.
 - fetch: prefer registry queries. Use "new" only if no registry query fits, and describe precisely what to compute (filters, grouping, metric). At most 4 queries.
-- cannot_answer: the schema and registry cannot provide the data. Say what is missing in reason.
+- cannot_answer: no query from the schema or registry could be used to extract relevant data to answer the question. Say what is missing in reason.
 - Never repeat queries listed as already fetched.
 - In a description of a new query, be specific regarding what the query needs to accomplish, what fields it should use, and how it should use them.
 - Plan the simplest set of queries to retrieve the required information when combine."""
