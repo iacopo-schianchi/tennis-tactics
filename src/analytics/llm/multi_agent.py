@@ -119,6 +119,7 @@ class MultiAgent:
         self.run_sql = run_sql
         self.queries = dict(queries)
         self.schema = schema
+        print("Schema: ", schema)
         self.player_id = player_id
         self.condensed = set(condensed)
         self.last_trace = None

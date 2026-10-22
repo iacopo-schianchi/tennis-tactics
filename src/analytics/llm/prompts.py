@@ -48,7 +48,7 @@ Rules:
 - cannot_answer: the schema and registry cannot provide the data. Say what is missing in reason.
 - Never repeat queries listed as already fetched.
 - In a description of a new query, be specific regarding what the query needs to accomplish, what fields it should use, and how it should use them.
-- Plan the simplest set of queries to retrieve the required information when combined."""
+- Plan the simplest set of queries to retrieve the required information when combine."""
 
 SQL_GEN_SYS = """You write one PostgreSQL query for a tennis analytics database. Your context has the schema and the conventions.
 Rules:
