@@ -5,12 +5,13 @@ import numpy as np
 
 BALL_PROB_THRESH = 0.5
 
-def postprocess(ball_prob):
-    ball_prob = ball_prob.reshape((360, 640)).astype(np.float32)
+def postprocess(ball_prob, W, H):
+    scale = H // 360
+    ball_prob = ball_prob.reshape((H, W)).astype(np.float32)
 
     mask_u8 = (ball_prob > BALL_PROB_THRESH).astype(np.uint8) * 255
 
-    circles = cv2.HoughCircles(mask_u8, cv2.HOUGH_GRADIENT, dp=1, minDist=1, param1=50, param2=2, minRadius=1, maxRadius=7)
+    circles = cv2.HoughCircles(mask_u8, cv2.HOUGH_GRADIENT, dp=1, minDist=1, param1=50, param2=2, minRadius=1, maxRadius=7*scale)
     if circles is None: return []
 
     h, w = ball_prob.shape

@@ -194,11 +194,12 @@ class BallDetector:
     def detect_ball(self, frames):
         orig_h, orig_w, _ = frames[0].shape
         self.frame_width = orig_w
-        H, W = 360, 640
+        # H, W = 360, 640
+        H, W = 720, 1280
 
-        img = cv2.resize(frames[2], (W, H))
-        img_prev = cv2.resize(frames[1], (W, H))
-        img_preprev = cv2.resize(frames[0], (W, H))
+        img = cv2.resize(frames[2], (W, H), interpolation=cv2.INTER_AREA)
+        img_prev = cv2.resize(frames[1], (W, H), interpolation=cv2.INTER_AREA)
+        img_preprev = cv2.resize(frames[0], (W, H), interpolation=cv2.INTER_AREA)
 
         # x = np.concatenate((img_preprev, img_prev, img), axis=2)
         x = np.concatenate((img, img_prev, img_preprev), axis=2)
@@ -210,7 +211,7 @@ class BallDetector:
             probs = trackernet_model(torch.from_numpy(x).to(DEVICE), testing=True)[0]
 
         ball_prob = probs[128:].sum(dim=0).cpu().numpy()
-        candidate_balls = postprocess(ball_prob)
+        candidate_balls = postprocess(ball_prob, W, H)
 
         all_candidates = [
             (
