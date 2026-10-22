@@ -69,7 +69,7 @@ class Model:
         )
         self.model.eval()
 
-    def generate(self, messages, max_new_tokens=512, thinking=False, json_schema=None):
+    def generate(self, messages, max_new_tokens=512, thinking=None, json_schema=None):
         if not self.local:
             contents = []
             system_instruction = []
@@ -92,6 +92,9 @@ class Model:
             if json_schema is not None:
                 config["response_mime_type"] = "application/json"
                 config["response_schema"] = json_schema
+            
+            if thinking is not None:
+                config["thinking_config"] = {"thinking_level": thinking}
 
             if system_instruction:
                 config["system_instruction"] = "\n\n".join(system_instruction)
