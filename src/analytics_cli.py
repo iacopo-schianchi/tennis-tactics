@@ -52,7 +52,7 @@ if __name__ == "__main__":
 
     model = Model(name=args.model_name, local=args.use_local_llm)
 
-    report_synthesizer = Agent(model, "report_synthesizer", REPORT_SYNTHESIZER_SYS, stateless=True, max_new_tokens=2048, thinking=True)
+    report_synthesizer = Agent(model, "report_synthesizer", REPORT_SYNTHESIZER_SYS, stateless=True, max_new_tokens=2048, thinking="medium")
 
     print("Synthesizing report...")
     
