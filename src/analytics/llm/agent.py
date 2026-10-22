@@ -5,7 +5,7 @@ DEFAULT_HISTORY_PATH = "chat_history.json"
 
 
 class Agent:
-    def __init__(self, model, name, system_prompt, history_path=DEFAULT_HISTORY_PATH, max_turns=10, max_new_tokens=512, thinking=False, stateless=False, json_schema=None):
+    def __init__(self, model, name, system_prompt, history_path=DEFAULT_HISTORY_PATH, max_turns=10, max_new_tokens=512, thinking=None, stateless=False, json_schema=None):
         self.model = model
         self.name = name
         self.system_prompt = system_prompt
