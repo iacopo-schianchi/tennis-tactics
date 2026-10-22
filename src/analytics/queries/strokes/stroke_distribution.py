@@ -124,10 +124,10 @@ def outcome_insight(rows):
 
     out = "Outcomes by quartile of shot speed, height and depth, within the player's own distribution for each stroke (Q1 = lowest values, Q4 = highest). 'in' is the share of shots that landed in, 'point win' is the share of points won, 'winners' and 'errors' are the share of shots that ended the point that way. " + DEPTH_NOTE
 
-    for (stroke, metric, units), buckets in groups.items():
+    for (stroke, metric), buckets in groups.items():
         total = sum(bucket["n"] for bucket in buckets)
         warning = ", low sample size for reliable estimates" if total < LOW_POINT_COUNT else ""
-        out += f"\n{stroke.capitalize()} ({units}) by {metric} ({total} shots{warning}):"
+        out += f"\n{stroke.capitalize()} by {metric} ({total} shots{warning}):"
         for bucket in sorted(buckets, key=lambda row: row["bucket"]):
             low = ", low sample" if bucket["n"] < LOW_BUCKET_COUNT else ""
             out += f"\n  Q{bucket['bucket']} ({_num(bucket['bucket_min'])} to {_num(bucket['bucket_max'])}, n={bucket['n']}{low}): in {_pct(bucket['in_rate'])}, point win {_pct(bucket['point_win_rate'])}, winners {_pct(bucket['winner_rate'])}, errors {_pct(bucket['error_rate'])}."
@@ -182,10 +182,10 @@ def interaction_insight(rows):
 
     out = "Outcomes by shot speed and depth tercile, within the player's own distribution for each stroke. " + DEPTH_NOTE
 
-    for stroke, cells, units in groups.items():
+    for stroke, cells in groups.items():
         total = sum(cell["n"] for cell in cells)
         warning = ", low sample size for reliable estimates" if total < LOW_GRID_COUNT else ""
-        out += f"\n{stroke.capitalize()} ({units}) ({total} shots{warning}):"
+        out += f"\n{stroke.capitalize()} ({total} shots{warning}):"
         for cell in sorted(cells, key=lambda row: (row["speed_tile"], row["depth_tile"])):
             low = ", low sample" if cell["n"] < LOW_BUCKET_COUNT else ""
             out += f"\n  {SPEED_LABELS[cell['speed_tile']]} and {DEPTH_LABELS[cell['depth_tile']]} (speed {_num(cell['speed_min'])} to {_num(cell['speed_max'])}, depth {_num(cell['depth_min'])} to {_num(cell['depth_max'])}, n={cell['n']}{low}): in {_pct(cell['in_rate'])}, point win {_pct(cell['point_win_rate'])}."
