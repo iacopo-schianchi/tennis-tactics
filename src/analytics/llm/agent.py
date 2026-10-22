@@ -5,7 +5,7 @@ DEFAULT_HISTORY_PATH = "chat_history.json"
 
 
 class Agent:
-    def __init__(self, model, name, system_prompt, history_path=DEFAULT_HISTORY_PATH, max_turns=10, max_new_tokens=512, thinking=False, stateless=False):
+    def __init__(self, model, name, system_prompt, history_path=DEFAULT_HISTORY_PATH, max_turns=10, max_new_tokens=512, thinking=False, stateless=False, json_schema=None):
         self.model = model
         self.name = name
         self.system_prompt = system_prompt
@@ -14,6 +14,7 @@ class Agent:
         self.max_new_tokens = max_new_tokens
         self.thinking = thinking
         self.stateless = stateless
+        self.json_schema = json_schema
 
         self.context = None
         self.turns = []
@@ -79,6 +80,7 @@ class Agent:
             self.messages([user]),
             max_new_tokens=self.max_new_tokens,
             thinking=self.thinking,
+            json_schema=self.json_schema
         )
         self.record(prompt if store is None else store, reply)
         return reply

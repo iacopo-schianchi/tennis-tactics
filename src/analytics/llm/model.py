@@ -69,8 +69,7 @@ class Model:
         )
         self.model.eval()
 
-    def generate(self, messages, max_new_tokens=512, thinking=False):
-        print(self.name, messages)
+    def generate(self, messages, max_new_tokens=512, thinking=False, json_schema=None):
         if not self.local:
             contents = []
             system_instruction = []
@@ -89,6 +88,10 @@ class Model:
             config = {
                 "max_output_tokens": max_new_tokens,
             }
+
+            if json_schema is not None:
+                config["response_mime_type"] = "application/json"
+                config["response_schema"] = json_schema
 
             if system_instruction:
                 config["system_instruction"] = "\n\n".join(system_instruction)
@@ -113,6 +116,8 @@ class Model:
             sampling = dict(do_sample=True, temperature=0.6, top_p=0.95, top_k=20)
         else:
             sampling = dict(do_sample=False)
+
+        # TODO: enfore JSON schema in local model too w/ lmformatenforcer
 
         with torch.inference_mode():
             output = self.model.generate(

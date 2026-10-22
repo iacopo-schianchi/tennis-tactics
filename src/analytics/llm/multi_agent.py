@@ -114,21 +114,39 @@ def render_results(results, budget):
     return "\n\n".join(blocks)
 
 
+def plan_schema(registry_names):
+    return {"type": "object", "properties": {
+        "action": {"type": "string", "enum": ["report_only", "fetch", "cannot_answer"]},
+        "reason": {"type": "string"},
+        "queries": {"type": "array", "maxItems": MAX_QUERIES, "items": {"type": "object", "properties": {
+            "source": {"type": "string", "enum": ["registry", "new"]},
+            "name": {"type": "string", "enum": list(registry_names)},
+            "description": {"type": "string"}}, "required": ["source"]}}},
+        "required": ["action", "reason", "queries"]}
+
+VERDICT_SCHEMA = {"type": "object", "properties": {
+    "correct": {"type": "boolean"}, "explanation": {"type": "string"}},
+    "required": ["correct", "explanation"]}
+
+SUFFICIENCY_SCHEMA = {"type": "object", "properties": {
+    "sufficient": {"type": "boolean"}, "missing": {"type": "string"}},
+    "required": ["sufficient", "missing"]}
+
+
 class MultiAgent:
     def __init__(self, model, run_sql, queries, schema, player_id, report=None, history_path=DEFAULT_HISTORY_PATH, condensed=()):
         self.run_sql = run_sql
         self.queries = dict(queries)
         self.schema = schema
-        print("Schema: ", schema)
         self.player_id = player_id
         self.condensed = set(condensed)
         self.last_trace = None
 
         # agents
-        self.planner = Agent(model, "planner", P.PLANNER_SYS, stateless=True, max_new_tokens=512)
+        self.planner = Agent(model, "planner", P.PLANNER_SYS, stateless=True, max_new_tokens=512, json_schema=plan_schema(self.queries))
         self.sql_gen = Agent(model, "sql_generator", P.SQL_GEN_SYS, stateless=True, max_new_tokens=768)
-        self.verifier = Agent(model, "verifier", P.VERIFIER_SYS, stateless=True, max_new_tokens=384)
-        self.sufficiency = Agent(model, "sufficiency", P.SUFFICIENCY_SYS, stateless=True, max_new_tokens=256)
+        self.verifier = Agent(model, "verifier", P.VERIFIER_SYS, stateless=True, max_new_tokens=384, json_schema=VERDICT_SCHEMA)
+        self.sufficiency = Agent(model, "sufficiency", P.SUFFICIENCY_SYS, stateless=True, max_new_tokens=256, json_schema=SUFFICIENCY_SCHEMA)
         self.synth = Agent(model, "synthesizer", P.SYNTH_SYS, history_path=history_path, max_new_tokens=768)
 
         sql_context = f"Schema:\n{schema}\n\nConventions:\n{P.DOMAIN_NOTES}"
@@ -255,7 +273,7 @@ class MultiAgent:
                     results.append(self._run_new(title))
             except Exception as e:
                 log.warning("query %s failed: %s", title, e)
-                failures.append({"title": title, "error": str()})
+                failures.append({"title": title, "error": str(e)})
         return attempted
 
     def _run_registry(self, name):
