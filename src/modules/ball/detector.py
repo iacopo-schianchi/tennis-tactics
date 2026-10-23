@@ -78,54 +78,56 @@ class BallDetector:
 
             return float(distance_pixels / distance_scale)
 
-        observation_costs = [
-            [detection_cost(candidate) for candidate in frame_candidates]
-            for frame_candidates in candidates_by_frame
-        ]
+        selected_indices = [0] * frame_count
 
-        if frame_count == 1:
-            selected_indices = [int(np.argmin(observation_costs[0]))]
+        # observation_costs = [
+        #     [detection_cost(candidate) for candidate in frame_candidates]
+        #     for frame_candidates in candidates_by_frame
+        # ]
 
-        else:
-            path_costs = {
-                candidate_index: observation_cost
-                for candidate_index, observation_cost in enumerate(observation_costs[0])
-            }
+        # if frame_count == 1:
+        #     selected_indices = [int(np.argmin(observation_costs[0]))]
 
-            backpointers_by_frame = [{} for _ in range(frame_count)]
+        # else:
+        #     path_costs = {
+        #         candidate_index: observation_cost
+        #         for candidate_index, observation_cost in enumerate(observation_costs[0])
+        #     }
 
-            for frame_index in range(1, frame_count):
-                next_path_costs = {}
-                backpointers = {}
+        #     backpointers_by_frame = [{} for _ in range(frame_count)]
 
-                previous_candidates = candidates_by_frame[frame_index - 1]
-                current_candidates = candidates_by_frame[frame_index]
+        #     for frame_index in range(1, frame_count):
+        #         next_path_costs = {}
+        #         backpointers = {}
 
-                for current_index, current_candidate in enumerate(current_candidates):
-                    best_path_cost = float("inf")
-                    best_previous_index = None
+        #         previous_candidates = candidates_by_frame[frame_index - 1]
+        #         current_candidates = candidates_by_frame[frame_index]
 
-                    for previous_index, previous_path_cost in (path_costs.items()):
-                        previous_candidate = previous_candidates[previous_index]
+        #         for current_index, current_candidate in enumerate(current_candidates):
+        #             best_path_cost = float("inf")
+        #             best_previous_index = None
 
-                        total_path_cost = previous_path_cost + observation_costs[frame_index][current_index] + distance_cost(previous_candidate, current_candidate)
+        #             for previous_index, previous_path_cost in (path_costs.items()):
+        #                 previous_candidate = previous_candidates[previous_index]
 
-                        if total_path_cost < best_path_cost:
-                            best_path_cost = total_path_cost
-                            best_previous_index = previous_index
+        #                 total_path_cost = previous_path_cost + observation_costs[frame_index][current_index] + distance_cost(previous_candidate, current_candidate)
 
-                    next_path_costs[current_index] = best_path_cost
-                    backpointers[current_index] = best_previous_index
+        #                 if total_path_cost < best_path_cost:
+        #                     best_path_cost = total_path_cost
+        #                     best_previous_index = previous_index
 
-                path_costs = next_path_costs
-                backpointers_by_frame[frame_index] = backpointers
+        #             next_path_costs[current_index] = best_path_cost
+        #             backpointers[current_index] = best_previous_index
 
-            selected_indices = [None] * frame_count
+        #         path_costs = next_path_costs
+        #         backpointers_by_frame[frame_index] = backpointers
 
-            selected_indices[-1] = min(path_costs, key=path_costs.get)
+        #     selected_indices = [None] * frame_count
 
-            for frame_index in range(frame_count - 1, 0, -1):
-                selected_indices[frame_index - 1] = backpointers_by_frame[frame_index][selected_indices[frame_index]]
+        #     selected_indices[-1] = min(path_costs, key=path_costs.get)
+
+        #     for frame_index in range(frame_count - 1, 0, -1):
+        #         selected_indices[frame_index - 1] = backpointers_by_frame[frame_index][selected_indices[frame_index]]
 
         for frame_id, (frame_context, frame_candidates, selected_index) in enumerate(zip(context, candidates_by_frame, selected_indices)):
             selected_candidate = frame_candidates[selected_index]
@@ -195,7 +197,7 @@ class BallDetector:
         orig_h, orig_w, _ = frames[0].shape
         self.frame_width = orig_w
         # H, W = 360, 640
-        H, W = 720, 1280
+        H, W = 540, 960
 
         img = cv2.resize(frames[2], (W, H), interpolation=cv2.INTER_AREA)
         img_prev = cv2.resize(frames[1], (W, H), interpolation=cv2.INTER_AREA)
@@ -203,7 +205,7 @@ class BallDetector:
 
         # x = np.concatenate((img_preprev, img_prev, img), axis=2)
         x = np.concatenate((img, img_prev, img_preprev), axis=2)
-        x = x.astype(np.float32) / 255.0
+        x = x.astype(np.float16) / 255.0
         x = np.transpose(x, (2, 0, 1))
         x = np.expand_dims(x, axis=0)
 
