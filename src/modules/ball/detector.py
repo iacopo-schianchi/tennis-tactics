@@ -197,7 +197,7 @@ class BallDetector:
         orig_h, orig_w, _ = frames[0].shape
         self.frame_width = orig_w
         # H, W = 360, 640
-        H, W = 540, 960
+        H, W = 544, 960
 
         img = cv2.resize(frames[2], (W, H), interpolation=cv2.INTER_AREA)
         img_prev = cv2.resize(frames[1], (W, H), interpolation=cv2.INTER_AREA)
