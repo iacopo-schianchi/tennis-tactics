@@ -126,7 +126,7 @@ class BallDetector:
                         last_frame, _ = last_observed
 
                         # max frame gap
-                        if frame_index - last_frame > self.max_missing_gap_frames: continue
+                        if frame_index - last_frame > self.max_missing_gap_frames: last_observed = None
 
                     for current_index, current_candidate in enumerate(current_candidates):
                         transition_cost = 0.0
