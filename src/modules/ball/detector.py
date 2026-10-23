@@ -21,6 +21,8 @@ trackernet_model.to(DEVICE)
 trackernet_model.eval()
 
 class BallDetector:
+    window_size = 3
+
     max_candidates_per_frame = 5
     missing_detection_cost = 1.07 # TODO: tune
     confidence_cost_weight = 3.0
