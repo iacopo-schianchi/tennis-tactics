@@ -78,56 +78,56 @@ class BallDetector:
 
             return float(distance_pixels / distance_scale)
 
-        selected_indices = [0] * frame_count
+        # selected_indices = [0] * frame_count
 
-        # observation_costs = [
-        #     [detection_cost(candidate) for candidate in frame_candidates]
-        #     for frame_candidates in candidates_by_frame
-        # ]
+        observation_costs = [
+            [detection_cost(candidate) for candidate in frame_candidates]
+            for frame_candidates in candidates_by_frame
+        ]
 
-        # if frame_count == 1:
-        #     selected_indices = [int(np.argmin(observation_costs[0]))]
+        if frame_count == 1:
+            selected_indices = [int(np.argmin(observation_costs[0]))]
 
-        # else:
-        #     path_costs = {
-        #         candidate_index: observation_cost
-        #         for candidate_index, observation_cost in enumerate(observation_costs[0])
-        #     }
+        else:
+            path_costs = {
+                candidate_index: observation_cost
+                for candidate_index, observation_cost in enumerate(observation_costs[0])
+            }
 
-        #     backpointers_by_frame = [{} for _ in range(frame_count)]
+            backpointers_by_frame = [{} for _ in range(frame_count)]
 
-        #     for frame_index in range(1, frame_count):
-        #         next_path_costs = {}
-        #         backpointers = {}
+            for frame_index in range(1, frame_count):
+                next_path_costs = {}
+                backpointers = {}
 
-        #         previous_candidates = candidates_by_frame[frame_index - 1]
-        #         current_candidates = candidates_by_frame[frame_index]
+                previous_candidates = candidates_by_frame[frame_index - 1]
+                current_candidates = candidates_by_frame[frame_index]
 
-        #         for current_index, current_candidate in enumerate(current_candidates):
-        #             best_path_cost = float("inf")
-        #             best_previous_index = None
+                for current_index, current_candidate in enumerate(current_candidates):
+                    best_path_cost = float("inf")
+                    best_previous_index = None
 
-        #             for previous_index, previous_path_cost in (path_costs.items()):
-        #                 previous_candidate = previous_candidates[previous_index]
+                    for previous_index, previous_path_cost in (path_costs.items()):
+                        previous_candidate = previous_candidates[previous_index]
 
-        #                 total_path_cost = previous_path_cost + observation_costs[frame_index][current_index] + distance_cost(previous_candidate, current_candidate)
+                        total_path_cost = previous_path_cost + observation_costs[frame_index][current_index] + distance_cost(previous_candidate, current_candidate)
 
-        #                 if total_path_cost < best_path_cost:
-        #                     best_path_cost = total_path_cost
-        #                     best_previous_index = previous_index
+                        if total_path_cost < best_path_cost:
+                            best_path_cost = total_path_cost
+                            best_previous_index = previous_index
 
-        #             next_path_costs[current_index] = best_path_cost
-        #             backpointers[current_index] = best_previous_index
+                    next_path_costs[current_index] = best_path_cost
+                    backpointers[current_index] = best_previous_index
 
-        #         path_costs = next_path_costs
-        #         backpointers_by_frame[frame_index] = backpointers
+                path_costs = next_path_costs
+                backpointers_by_frame[frame_index] = backpointers
 
-        #     selected_indices = [None] * frame_count
+            selected_indices = [None] * frame_count
 
-        #     selected_indices[-1] = min(path_costs, key=path_costs.get)
+            selected_indices[-1] = min(path_costs, key=path_costs.get)
 
-        #     for frame_index in range(frame_count - 1, 0, -1):
-        #         selected_indices[frame_index - 1] = backpointers_by_frame[frame_index][selected_indices[frame_index]]
+            for frame_index in range(frame_count - 1, 0, -1):
+                selected_indices[frame_index - 1] = backpointers_by_frame[frame_index][selected_indices[frame_index]]
 
         for frame_id, (frame_context, frame_candidates, selected_index) in enumerate(zip(context, candidates_by_frame, selected_indices)):
             selected_candidate = frame_candidates[selected_index]
