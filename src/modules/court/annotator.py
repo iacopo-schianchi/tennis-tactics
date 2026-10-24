@@ -16,11 +16,10 @@ CENTER_X_M = COURT_WIDTH_M / 2
 MINIMAP_HEIGHT_RATIO = 0.4
 MINIMAP_PADDING_RATIO = 0.1 # space between court and minimap box edge, relative to court height
 MINIMAP_MARGIN_RATIO = 0.1 # space between minimap box and frame corner, relative to court height
-MINIMAP_BOUNCE_WINDOW = 15
+MINIMAP_BOUNCE_WINDOW = 30
 MINIMAP_BOUNCE_MAX_RADIUS = 8
 
-MINIMAP_BG_COLOR = (40, 90, 40)
-MINIMAP_BORDER_COLOR = (60, 140, 60)
+MINIMAP_BG_COLOR = (32, 37, 24)
 MINIMAP_LINE_COLOR = COLORS_BGR.WHITE.value
 
 MINIMAP_LINES_M = [
@@ -41,6 +40,22 @@ MINIMAP_LINES_M = [
     ((CENTER_X_M, SERVICE_LINE_FAR_Y_M), (CENTER_X_M, SERVICE_LINE_NEAR_Y_M)),
 ]
 
+def draw_rounded_rect(image, top_left, bottom_right, color, radius):
+    x1, y1 = top_left
+    x2, y2 = bottom_right
+
+    radius = min(radius, (x2 - x1) // 2, (y2 - y1) // 2)
+
+    cv2.rectangle(image, (x1 + radius, y1), (x2 - radius, y2), color, -1, cv2.LINE_AA)
+    cv2.rectangle(image, (x1, y1 + radius), (x2, y2 - radius), color, -1, cv2.LINE_AA)
+
+    for cx, cy in [
+        (x1 + radius, y1 + radius),
+        (x2 - radius, y1 + radius),
+        (x1 + radius, y2 - radius),
+        (x2 - radius, y2 - radius),
+    ]:
+        cv2.circle(image, (cx, cy), radius, color, -1, cv2.LINE_AA)
 
 class CourtAnnotator():
     def draw(self, frame, frame_id, context):
@@ -67,19 +82,28 @@ class CourtAnnotator():
         court_origin_x = box_origin_x + padding_px
         court_origin_y = box_origin_y + padding_px
 
-        cv2.rectangle(
-            frame,
-            (box_origin_x, box_origin_y),
-            (box_origin_x + minimap_w, box_origin_y + minimap_h),
+        x1 = box_origin_x + 1
+        y1 = box_origin_y + 1
+        x2 = box_origin_x + minimap_w - 2
+        y2 = box_origin_y + minimap_h - 2
+
+        overlay = frame.copy()
+
+        draw_rounded_rect(
+            overlay,
+            (x1, y1),
+            (x2, y2),
             MINIMAP_BG_COLOR,
-            -1,
+            radius=12,
         )
-        cv2.rectangle(
-            frame,
-            (box_origin_x, box_origin_y),
-            (box_origin_x + minimap_w, box_origin_y + minimap_h),
-            MINIMAP_BORDER_COLOR,
-            1,
+
+        alpha = 0.8
+        frame[y1:y2 + 1, x1:x2 + 1] = cv2.addWeighted(
+            overlay[y1:y2 + 1, x1:x2 + 1],
+            alpha,
+            frame[y1:y2 + 1, x1:x2 + 1],
+            1 - alpha,
+            0,
         )
 
         def to_minimap_px(x_m, y_m):
@@ -87,10 +111,19 @@ class CourtAnnotator():
             py = court_origin_y + int((y_m / COURT_LENGTH_M) * court_h)
             return px, py
 
-        for start_m, end_m in MINIMAP_LINES_M:
+        for i, (start_m, end_m) in enumerate(MINIMAP_LINES_M):
             p1 = to_minimap_px(*start_m)
             p2 = to_minimap_px(*end_m)
-            cv2.line(frame, p1, p2, MINIMAP_LINE_COLOR, 1)
+            thickness = 1
+            
+            # net
+            if i == 6:
+                thickness = 3
+                dist = p1[0] - p2[0]
+                p1[0] -= 0.05 * dist
+                p2[0] += 0.05 * dist
+                
+            cv2.line(frame, p1, p2, MINIMAP_LINE_COLOR, thickness)
         
         # players
         players = context[frame_id].get('players') if isinstance(context[frame_id], dict) else None
@@ -101,7 +134,7 @@ class CourtAnnotator():
                 feet = player.get('feet_m')
                 if not feet: continue
                 px, py = to_minimap_px(*feet)
-                cv2.circle(frame, (px, py), 5, COLORS_BGR.RED.value, -1)
+                cv2.circle(frame, (px, py), 5, COLORS_BGR.NEAR_PLAYER.value if key == 'near' else COLORS_BGR.FAR_PLAYER.value, -1)
 
         # bounce
         start_i = max(0, frame_id - MINIMAP_BOUNCE_WINDOW)
@@ -120,7 +153,7 @@ class CourtAnnotator():
                 t = 1 - (frames_since / MINIMAP_BOUNCE_WINDOW)
                 radius = max(1, int(MINIMAP_BOUNCE_MAX_RADIUS * t))
                 px, py = to_minimap_px(bx_m, by_m)
-                cv2.circle(frame, (px, py), radius, COLORS_BGR.BLUE.value, -1)
+                cv2.circle(frame, (px, py), radius, COLORS_BGR.BALL.value, -1)
 
         return frame
 
@@ -129,6 +162,10 @@ class CourtAnnotator():
         if court_points is None: return
 
         pts = np.array([[int(x), int(y)] for x, y in court_points], dtype=np.int32)
-        cv2.polylines(frame, [pts], isClosed=True, color=(0, 0, 255), thickness=2)
+
+        overlay = frame.copy()
+
+        cv2.polylines(overlay, [pts], isClosed=True, color=(42, 182, 232), thickness=3, lineType=cv2.LINE_AA)
+        cv2.addWeighted(overlay, 0.7, frame, 0.3, 0, dst=frame)
 
         return frame

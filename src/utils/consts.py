@@ -11,3 +11,7 @@ class COLORS_BGR(Enum):
     BLUE = (255, 0, 0)
     YELLOW = (0, 255, 255)
     WHITE = (255, 255, 255)
+    NEAR_PLAYER = (44, 230, 161)
+    FAR_PLAYER = (127, 0, 255)
+    BALL = (255, 217, 0)
+    HIT_BALL = (247, 118, 72)

@@ -296,7 +296,7 @@ class VideoProcessor:
         ClipRepository().save(persisted)
 
     def _run_annotation(self, video_path):
-        annotator = VideoAnnotator(self.context, self.fps, self.stride, ball_only=self.ball_only)
+        annotator = VideoAnnotator(self.context, self.fps, self.stride, self.player_map, ball_only=self.ball_only)
         annotator.render(video_path)
 
     def _run_perception(self, frames, frame_id, modules):

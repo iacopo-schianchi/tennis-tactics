@@ -29,12 +29,12 @@ def json_default(obj):
 
 class VideoAnnotator:
     # ball_only: temporarily only annotate ball
-    def __init__(self, context, fps=30, stride=1, ball_only=False):
+    def __init__(self, context, fps=30, stride=1, player_map={}, ball_only=False):
         self.context = context
         self.annotators = [
             CourtAnnotator(),
             BallAnnotator(),
-            MetricAnnotator(),
+            MetricAnnotator(player_map),
             PlayerAnnotator(),
         ] if not ball_only else [
             CourtAnnotator(),

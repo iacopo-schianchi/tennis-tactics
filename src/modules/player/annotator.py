@@ -5,10 +5,10 @@ class PlayerAnnotator:
     def draw(self, frame, frame_id, context):
         players = context[frame_id]['players']
 
-        for player in players.values():
+        for role, player in players.items():
             if player is None: continue
 
-            x1, y1, x2, y2  = player['bbox']
-            cv2.rectangle(frame, (x1, y1), (x2, y2), COLORS_BGR.RED.value, 2)
+            x, y = player['feet_px']
+            cv2.circle(frame, (x, y), 12, COLORS_BGR.NEAR_PLAYER.value if role == "near" else COLORS_BGR.FAR_PLAYER.value, -1)
 
         return frame
