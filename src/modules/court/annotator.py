@@ -119,10 +119,12 @@ class CourtAnnotator():
             # net
             if i == 6:
                 thickness = 3
-                dist = p1[0] - p2[0]
-                cv2.line(frame, (p1[0] - 0.05*dist, p1[1]), (p2[0] + 0.05*dist, p2[1]), MINIMAP_LINE_COLOR, thickness)
+
+                extension = int(round(0.05 * abs(p2[0] - p1[0])))
+
+                cv2.line(frame, (p1[0] - extension, p1[1]), (p2[0] + extension, p2[1]), MINIMAP_LINE_COLOR, thickness, cv2.LINE_AA)
             else:
-                cv2.line(frame, p1, p2, MINIMAP_LINE_COLOR, thickness)
+                cv2.line(frame, p1, p2, MINIMAP_LINE_COLOR, thickness, cv2.LINE_AA)
         
         # players
         players = context[frame_id].get('players') if isinstance(context[frame_id], dict) else None
@@ -158,7 +160,7 @@ class CourtAnnotator():
 
     def draw_court(self, frame, frame_id, context):
         court_points = context[frame_id].get('court').get('points')
-        if court_points is None: return
+        if court_points is None: return frame
 
         pts = np.array([[int(x), int(y)] for x, y in court_points], dtype=np.int32)
 
