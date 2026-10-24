@@ -72,7 +72,7 @@ def main():
         except EOFError:
             break
         if not question:
-            break
+            continue
         print(system.query(question), "\n")
 
 
