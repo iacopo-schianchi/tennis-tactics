@@ -116,14 +116,17 @@ class CourtAnnotator():
             p2 = to_minimap_px(*end_m)
             thickness = 1
             
+            pt1 = [p1[0], p1[1]]
+            pt2 = [p2[0], p2[1]]
+
             # net
             if i == 6:
                 thickness = 3
-                dist = p1[0] - p2[0]
-                p1[0] -= 0.05 * dist
-                p2[0] += 0.05 * dist
+                dist = pt1[0] - pt2[0]
+                pt1[0] -= 0.05 * dist
+                pt2[0] += 0.05 * dist
                 
-            cv2.line(frame, p1, p2, MINIMAP_LINE_COLOR, thickness)
+            cv2.line(frame, pt1, pt2, MINIMAP_LINE_COLOR, thickness)
         
         # players
         players = context[frame_id].get('players') if isinstance(context[frame_id], dict) else None
