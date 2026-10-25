@@ -36,9 +36,8 @@ class EventDetector:
         X_raw = np.array(feature_list, dtype=np.float32)
 
         X_scaled = self.scaler.transform(X_raw)
+        X_scaled = np.clip(X_scaled, -4, 4)
         X_scaled = np.nan_to_num(X_scaled, nan=0.0)
-
-        print(dict(zip(self.FEATURE_COLS, (np.abs(X_scaled) > 4).mean(0).round(3))))
 
         prob_sum = np.zeros((n_total, 3), dtype=np.float64)
         overlap_count = np.zeros(n_total, dtype=np.float64)
