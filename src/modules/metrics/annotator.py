@@ -120,19 +120,32 @@ class MetricAnnotator:
 
         frame_h, frame_w = frame.shape[:2]
 
-        margin = max(12, int(frame_w * 0.02))
-        panel_x = margin
-        panel_y = margin
-        panel_w = min(400, frame_w - 2 * margin)
+        scale = frame_h / 544.0
 
-        padding = 12
-        header_h = 30
-        row_h = 72
-        row_gap = 5
+        def px(value):
+            return max(1, int(round(value * scale)))
 
-        panel_h = 2 * padding + header_h + 8 + len(recent_shots) * row_h + (len(recent_shots) - 1) * row_gap
+        def font(value):
+            return max(0.25, value * scale)
 
-        panel_h = min(panel_h, frame_h - 2 * margin)
+        def thickness(value):
+            return max(1, int(round(value * scale)))
+
+        margin_x = max(px(12), int(frame_w * 0.02))
+        margin_y = px(12)
+
+        panel_x = margin_x
+        panel_y = margin_y
+        panel_w = min(px(400), frame_w - 2 * margin_x)
+
+        padding = px(12)
+        header_h = px(30)
+        row_h = px(72)
+        row_gap = px(5)
+
+        panel_h = 2 * padding + header_h + px(8) + len(recent_shots) * row_h + (len(recent_shots) - 1) * row_gap
+
+        panel_h = min(panel_h, frame_h - 2 * margin_y)
 
         x1, y1 = panel_x, panel_y
         x2 = panel_x + panel_w - 1
@@ -140,27 +153,27 @@ class MetricAnnotator:
 
         overlay = frame[y1:y2 + 1, x1:x2 + 1].copy()
 
-        self._rounded_rect(overlay, 0, 0, panel_w - 1, panel_h - 1, self.PANEL_BG, radius=12,)
+        self._rounded_rect(overlay, 0, 0, panel_w - 1, panel_h - 1, self.PANEL_BG, radius=px(12))
 
         roi = frame[y1:y2 + 1, x1:x2 + 1]
         cv2.addWeighted(overlay, 0.88, roi, 0.12, 0, dst=roi)
 
         # header
-        header_baseline = panel_y + padding + 18
+        header_baseline = panel_y + padding + px(18)
 
-        self._draw_text(frame, "RECENT SHOTS", (panel_x + padding, header_baseline), self.TEXT_COLOR, scale=0.55, thickness=2)
+        self._draw_text(frame, "RECENT SHOTS", (panel_x + padding, header_baseline), self.TEXT_COLOR, scale=font(0.55), thickness=thickness(2))
 
         # header label
         badge_text = "LAST 2"
-        badge_size = cv2.getTextSize(badge_text, self.FONT, 0.38, 1)[0]
+        badge_size = cv2.getTextSize(badge_text, self.FONT, font(0.38), thickness(1))[0]
 
-        self._draw_text( frame, badge_text, (panel_x + panel_w - padding - badge_size[0], header_baseline), self.MUTED_COLOR, scale=0.38)
+        self._draw_text( frame, badge_text, (panel_x + panel_w - padding - badge_size[0], header_baseline), self.MUTED_COLOR, scale=font(0.38))
 
         divider_y = panel_y + padding + header_h
-        cv2.line(frame, (panel_x + padding, divider_y), (panel_x + panel_w - padding, divider_y), self.DIVIDER_COLOR, 1, cv2.LINE_AA)
+        cv2.line(frame, (panel_x + padding, divider_y), (panel_x + panel_w - padding, divider_y), self.DIVIDER_COLOR, thickness(1), cv2.LINE_AA)
 
         # shot rows
-        row_start_y = divider_y + 8
+        row_start_y = divider_y + px(8)
 
         for index, (shot_frame_id, hit_context) in enumerate(recent_shots):
             row_y = row_start_y + index * (row_h + row_gap)
@@ -193,31 +206,31 @@ class MetricAnnotator:
             speed_color = self._speed_color(speed)
 
             # player identity marker and name
-            cv2.circle(frame, (left_x + 4, row_y + 12), 4, player_color, -1, cv2.LINE_AA)
+            cv2.circle(frame, (left_x + px(4), row_y + px(12)), px(4), player_color, -1, cv2.LINE_AA)
 
             name_text = f"{player_name}  |  {role.upper() if role else 'PLAYER'}"
 
-            self._draw_text(frame, name_text, (left_x + 14, row_y + 17), player_color, scale=0.45, thickness=2)
+            self._draw_text(frame, name_text, (left_x + px(14), row_y + px(17)), player_color, scale=font(0.45), thickness=thickness(2))
 
             # stroke label and value
-            self._draw_text(frame, "STROKE", (left_x, row_y + 39), self.MUTED_COLOR, scale=0.38)
+            self._draw_text(frame, "STROKE", (left_x, row_y + px(39)), self.MUTED_COLOR, scale=font(0.38))
 
-            self._draw_text(frame, shot_name, (left_x + 63, row_y + 39), self.TEXT_COLOR, scale=0.46, thickness=1)
+            self._draw_text(frame, shot_name, (left_x + px(63), row_y + px(39)), self.TEXT_COLOR, scale=font(0.46), thickness=thickness(1))
 
             # speed colored value
-            speed_size = cv2.getTextSize(speed_text, self.FONT, 0.47, 2)[0]
+            speed_size = cv2.getTextSize(speed_text, self.FONT, font(0.47), thickness(2))[0]
 
-            self._draw_text(frame, speed_text, (right_x - speed_size[0], row_y + 39), speed_color, scale=0.47, thickness=2)
+            self._draw_text(frame, speed_text, (right_x - speed_size[0], row_y + px(39)), speed_color, scale=font(0.47), thickness=thickness(2))
 
             # height label and value
-            self._draw_text(frame, "SHOT HEIGHT", (left_x, row_y + 61), self.MUTED_COLOR, scale=0.38)
+            self._draw_text(frame, "SHOT HEIGHT", (left_x, row_y + px(61)), self.MUTED_COLOR, scale=font(0.38))
 
-            self._draw_text(frame, height_text, (left_x + 91, row_y + 61), self.TEXT_COLOR, scale=0.43)
+            self._draw_text(frame, height_text, (left_x + px(91), row_y + px(61)), self.TEXT_COLOR, scale=font(0.43))
 
             # separator
             if index < len(recent_shots) - 1:
                 separator_y = row_y + row_h + row_gap // 2
 
-                cv2.line(frame, (left_x, separator_y), (right_x, separator_y), self.DIVIDER_COLOR, 1, cv2.LINE_AA)
+                cv2.line(frame, (left_x, separator_y), (right_x, separator_y), self.DIVIDER_COLOR, thickness(1), cv2.LINE_AA)
 
         return frame
