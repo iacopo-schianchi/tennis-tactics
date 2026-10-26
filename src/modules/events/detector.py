@@ -9,7 +9,7 @@ class EventDetector:
         "x", "y", "is_missing", "vx", "vy", "ax", "ay",
         "speed", "accel", "angle", "delta_angle",
     ]
-    DUPLICATE_HIT_WINDOW = 5
+    DUPLICATE_HIT_WINDOW = 4
 
     def __init__(self):
         self.model = load_model('src/models/bilstm_event_classifier_small.keras')
@@ -129,19 +129,15 @@ class EventDetector:
 
         # filter duplicate hits
         hit_indices = np.where(accepted)[0]
+
         if len(hit_indices) > 1:
-            filtered_hits = []
-            for idx in hit_indices:
-                if len(filtered_hits) == 0:
+            filtered_hits = [hit_indices[0]]
+
+            for idx in hit_indices[1:]:
+                if idx - filtered_hits[-1] > self.DUPLICATE_HIT_WINDOW:
                     filtered_hits.append(idx)
-                else:
-                    if idx - filtered_hits[-1] <= self.DUPLICATE_HIT_WINDOW:
-                        filtered_hits[-1] = idx
-                    else:
-                        filtered_hits.append(idx)
 
             accepted[:] = False
-            for idx in filtered_hits:
-                accepted[idx] = True
+            accepted[filtered_hits] = True
 
         return accepted
