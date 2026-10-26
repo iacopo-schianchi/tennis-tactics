@@ -59,7 +59,7 @@ class VideoProcessor:
             self.passes = [
                 (BallDetector(self, self.fps),),
                 (BallKinematics(self, self.fps),),
-                (EventDetector(),)
+                (EventDetector(self.fps),)
             ]
             return
 
@@ -75,7 +75,7 @@ class VideoProcessor:
                 BallKinematics(self, self.fps),
             ),
             (
-                EventDetector(),
+                EventDetector(self.fps),
             ),
             (
                 # shot classification & peak/speed estimation

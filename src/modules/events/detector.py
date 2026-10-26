@@ -9,12 +9,12 @@ class EventDetector:
         "x", "y", "is_missing", "vx", "vy", "ax", "ay",
         "speed", "accel", "angle", "delta_angle",
     ]
-    DUPLICATE_HIT_WINDOW = 4
 
-    def __init__(self):
+    def __init__(self, fps):
         self.model = load_model('src/models/bilstm_event_classifier_small.keras')
         self.scaler = joblib.load('src/models/feature_scaler_small.pkl')
         self.predictions_cache = None
+        self.DUPLICATE_HIT_WINDOW = self.fps // 3
 
     def process(self, _frames, frame_id, context):
         if self.predictions_cache is None:
