@@ -24,11 +24,13 @@ class BallDetector:
     window_size = 3
 
     max_candidates_per_frame = 5
-    missing_detection_cost = 1.07 # TODO: tune
+    
+    # for cost of missing detection
+    missing_detection_conf = 0.7 # TODO: tune
     confidence_cost_weight = 3.0
     distance_reference_pixels = 40.0
 
-    max_displacement_per_frame_pct = 0.09
+    max_displacement_per_frame_pct = 0.09 # avoid large jumps
     max_missing_gap_frames = 10
 
     def __init__(self, processor, fps):
@@ -40,7 +42,7 @@ class BallDetector:
         if x is None or y is None or H is None:
             return None, None
 
-        pt = np.array([[[x, y]]], dtype=np.float32)
+        pt = np.array([[[x, y]]])
 
         court_pt = cv2.perspectiveTransform(pt, H)[0, 0]
 
@@ -52,121 +54,125 @@ class BallDetector:
         candidates_by_frame = []
 
         for frame_context in context:
-            frame_candidates = frame_context.get("ball_candidates", [])
+            frame_candidates = frame_context.get("ball_candidates", []) # candidates: x, y, confidence
 
             frame_candidates = sorted(frame_candidates, key=lambda candidate: candidate[2], reverse=True)[:self.max_candidates_per_frame]
-            candidates_by_frame.append(frame_candidates + [None])
+            candidates_by_frame.append(frame_candidates + [None]) # None = no detection
 
         frame_count = len(candidates_by_frame)
 
         def detection_cost(candidate):
-            if candidate is None:
-                return self.missing_detection_cost
-
-            confidence = np.clip(candidate[2], 1e-6, 1.0)
+            confidence = self.missing_detection_conf
+            if candidate is not None:
+                confidence = np.clip(candidate[2], 1e-6, 1.0)
 
             return self.confidence_cost_weight * -np.log(confidence)
 
-        def distance_cost(previous_candidate, current_candidate, dt=1):
-            if previous_candidate is None or current_candidate is None:
+        def distance_cost(prev, curr, dt):
+            if prev is None or curr is None:
                 return 0.0
 
-            previous_position = np.asarray(previous_candidate[:2], dtype=np.float64)
-            current_position = np.asarray(current_candidate[:2], dtype=np.float64)
+            prev_pos = np.asarray(prev[:2])
+            curr_pos = np.asarray(curr[:2])
 
-            distance_pixels = np.linalg.norm(current_position - previous_position)
+            dist_px = np.linalg.norm(curr_pos - prev_pos)
 
-            reference_width = getattr(self, "frame_width", None) or 640
-            distance_scale = self.distance_reference_pixels * reference_width / 640.0
+            reference_width = self.frame_width or 640
+            dist_scale = self.distance_reference_pixels * reference_width / 640.0
 
-            return float(distance_pixels / (distance_scale * dt))
+            fps_scale = self.fps / 30.0
 
-        def transition_is_feasible(previous_candidate, current_candidate, dt=1):
-            if previous_candidate is None or current_candidate is None:
+            # relative to dt (frames passed)
+            return float(dist_px / (dist_scale * dt) * fps_scale)
+
+        # filter unplausible mvoements
+        def transition_is_feasible(prev, curr, dt):
+            if prev is None or curr is None:
                 return True
 
-            previous_position = np.asarray(previous_candidate[:2], dtype=np.float64)
-            current_position = np.asarray(current_candidate[:2], dtype=np.float64)
+            prev_pos = np.asarray(prev[:2])
+            curr_pos = np.asarray(curr[:2])
 
-            distance_pixels = np.linalg.norm(current_position - previous_position)
+            dist_px = np.linalg.norm(curr_pos - prev_pos)
 
             reference_width = getattr(self, "frame_width", None) or 640
-            max_distance = self.max_displacement_per_frame_pct * reference_width * dt
+            fps_scale = self.fps / 30.0
+            max_distance = self.max_displacement_per_frame_pct * reference_width * dt / fps_scale
 
-            return distance_pixels <= max_distance
+            return dist_px <= max_distance
 
         observation_costs = [
             [detection_cost(candidate) for candidate in frame_candidates]
             for frame_candidates in candidates_by_frame
         ]
 
-        if frame_count == 1:
-            selected_indices = [int(np.argmin(observation_costs[0]))]
+        path_costs = {} # lowest to reach tracking state
+        backpointers = [{} for _ in range(frame_count)] # prev states to lowest cost path
 
-        else:
-            path_costs = {}
-            backpointers_by_frame = [{} for _ in range(frame_count)]
+        # init first frame
+        for candidate_index, candidate in enumerate(candidates_by_frame[0]):
+            last_observed = (0, candidate_index) if candidate is not None else None
 
-            for candidate_index, candidate in enumerate(candidates_by_frame[0]):
-                last_observed = (0, candidate_index) if candidate is not None else None
+            state = (candidate_index, last_observed)
+            path_costs[state] = observation_costs[0][candidate_index]
 
-                state = (candidate_index, last_observed)
-                path_costs[state] = observation_costs[0][candidate_index]
+        for frame_index in range(1, frame_count):
+            next_path_costs = {}
+            frame_backpointers = {}
 
-            for frame_index in range(1, frame_count):
-                next_path_costs = {}
-                backpointers = {}
+            candidates = candidates_by_frame[frame_index]
 
-                current_candidates = candidates_by_frame[frame_index]
+            for previous_state, prev_path_cost in path_costs.items():
+                _, last_observed = previous_state
 
-                for previous_state, previous_path_cost in path_costs.items():
-                    previous_index, last_observed = previous_state
+                if last_observed is not None:
+                    last_frame, _ = last_observed
 
-                    if last_observed is not None:
-                        last_frame, _ = last_observed
+                    # max frame gap
+                    max_gap = self.max_missing_gap_frames * (self.fps / 30.0)
+                    if frame_index - last_observed[0] > max_gap: last_observed = None
 
-                        # max frame gap
-                        if frame_index - last_frame > self.max_missing_gap_frames: last_observed = None
+                for current_index, curr in enumerate(candidates):
+                    transition_cost = 0.0
 
-                    for current_index, current_candidate in enumerate(current_candidates):
-                        transition_cost = 0.0
+                    if curr is not None and last_observed is not None:
+                        last_frame, last_candidate_index = last_observed
 
-                        if current_candidate is not None and last_observed is not None:
-                            last_frame, last_candidate_index = last_observed
+                        last_candidate = candidates_by_frame[last_frame][last_candidate_index]
 
-                            last_candidate = candidates_by_frame[last_frame][last_candidate_index]
+                        dt = frame_index - last_frame
 
-                            dt = frame_index - last_frame
+                        if not transition_is_feasible(last_candidate, curr, dt): continue
 
-                            if not transition_is_feasible(last_candidate, current_candidate, dt): continue
+                        transition_cost = distance_cost(last_candidate, curr, dt)
 
-                            transition_cost = distance_cost(last_candidate, current_candidate, dt)
+                    if curr is not None:
+                        last_seen = (frame_index, current_index)
+                    else:
+                        last_seen = last_observed
 
-                        if current_candidate is not None:
-                            new_last_observed = (frame_index, current_index)
-                        else:
-                            new_last_observed = last_observed
+                    new_state = (current_index, last_seen)
 
-                        new_state = (current_index, new_last_observed)
+                    total_cost = prev_path_cost + observation_costs[frame_index][current_index] + transition_cost
 
-                        total_cost = previous_path_cost + observation_costs[frame_index][current_index] + transition_cost
+                    if (new_state not in next_path_costs or total_cost < next_path_costs[new_state]):
+                        next_path_costs[new_state] = total_cost
+                        frame_backpointers[new_state] = previous_state
 
-                        if (new_state not in next_path_costs or total_cost < next_path_costs[new_state]):
-                            next_path_costs[new_state] = total_cost
-                            backpointers[new_state] = previous_state
+            path_costs = next_path_costs
+            backpointers[frame_index] = frame_backpointers
 
-                path_costs = next_path_costs
-                backpointers_by_frame[frame_index] = backpointers
+        selected_indices = [None] * frame_count
 
-            selected_indices = [None] * frame_count
+        # select min path cost
+        state = min(path_costs, key=path_costs.get)
 
-            state = min(path_costs, key=path_costs.get)
+        # reconstruct
+        for frame_index in range(frame_count - 1, -1, -1):
+            selected_indices[frame_index] = state[0]
 
-            for frame_index in range(frame_count - 1, -1, -1):
-                selected_indices[frame_index] = state[0]
-
-                if frame_index > 0:
-                    state = backpointers_by_frame[frame_index][state]
+            if frame_index > 0:
+                state = backpointers[frame_index][state]
 
         for frame_id, (frame_context, frame_candidates, selected_index) in enumerate(zip(context, candidates_by_frame, selected_indices)):
             selected_candidate = frame_candidates[selected_index]
