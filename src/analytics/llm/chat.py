@@ -2,17 +2,17 @@ import argparse
 import logging
 import os
 
-from analytics.llm.agent import DEFAULT_HISTORY_PATH
-from analytics.llm.db import PostgresRunner
-from analytics.llm.model import Model
-from analytics.llm.multi_agent import MultiAgent
+from src.analytics.llm.agent import DEFAULT_HISTORY_PATH
+from src.analytics.llm.db import PostgresRunner
+from src.analytics.llm.model import Model
+from src.analytics.llm.multi_agent import MultiAgent
 
 # registry queries whose insight is called with condensed=True
 CONDENSED_QUERIES = ['reply_direction_by_incoming_shot']
 
 
 def load_queries():
-    from analytics import registry
+    from src.analytics import registry
 
     for attr in ("QUERIES", "REGISTRY", "queries"):
         found = getattr(registry, attr, None)

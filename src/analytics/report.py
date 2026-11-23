@@ -1,8 +1,8 @@
 from dataclasses import dataclass, field
 from typing import Any
 
-from analytics.db import run_sql
-from analytics.registry import REGISTRY
+from src.analytics.db import run_sql
+from src.analytics.registry import REGISTRY
 
 @dataclass
 class QueryResult:

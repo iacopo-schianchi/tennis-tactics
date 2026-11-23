@@ -1,4 +1,4 @@
-from analytics.registry import Query, register
+from src.analytics.registry import Query, register
 from utils.consts import COURT_WIDTH
 
 LOW_POINT_COUNT = 20

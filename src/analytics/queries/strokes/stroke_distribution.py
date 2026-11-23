@@ -1,4 +1,4 @@
-from analytics.registry import Query, register
+from src.analytics.registry import Query, register
 
 LOW_POINT_COUNT = 20
 LOW_BUCKET_COUNT = 5

@@ -1,6 +1,6 @@
 from itertools import groupby
 
-from analytics.registry import Query, register
+from src.analytics.registry import Query, register
 
 LOW_POINT_COUNT = 20
 

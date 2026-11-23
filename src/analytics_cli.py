@@ -1,26 +1,26 @@
 import argparse
 from uuid import UUID
 
-from analytics.report import AnalyticsReport
+from src.analytics.report import src.analyticsReport
 
-import analytics.queries.serve.serve_return
-import analytics.queries.serve.ace_rate
-import analytics.queries.serve.serve_placement
-import analytics.queries.serve.serve_speed
+import src.analytics.queries.serve.serve_return
+import src.analytics.queries.serve.ace_rate
+import src.analytics.queries.serve.serve_placement
+import src.analytics.queries.serve.serve_speed
 
-import analytics.queries.strokes.end_stroke
-import analytics.queries.strokes.stroke_distribution
-import analytics.queries.strokes.distance_for_winner
+import src.analytics.queries.strokes.end_stroke
+import src.analytics.queries.strokes.stroke_distribution
+import src.analytics.queries.strokes.distance_for_winner
 
-import analytics.queries.sequences.shot_return_type_distribution
-import analytics.queries.sequences.rally_length_stats
-import analytics.queries.sequences.shot_sequence_effectiveness
+import src.analytics.queries.sequences.shot_return_type_distribution
+import src.analytics.queries.sequences.rally_length_stats
+import src.analytics.queries.sequences.shot_sequence_effectiveness
 
-import analytics.queries.positioning.position_depth_stats
+import src.analytics.queries.positioning.position_depth_stats
 
-from analytics.llm.prompts import REPORT_SYNTHESIZER_SYS
-from analytics.llm.model import Model
-from analytics.llm.agent import Agent
+from src.analytics.llm.prompts import REPORT_SYNTHESIZER_SYS
+from .llm.model import Model
+from src.analytics.llm.agent import Agent
 
 def uuid_type(value):
     try:
