@@ -1,4 +1,4 @@
-from src.analytics.registry import Query, register
+from analytics.registry import Query, register
 import math
 
 LOW_POINT_COUNT = 8

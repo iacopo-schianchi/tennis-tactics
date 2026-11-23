@@ -1,4 +1,4 @@
-from src.analytics.registry import Query, register
+from analytics.registry import Query, register
 from collections import defaultdict
 
 LOW_POINT_COUNT = 20

@@ -3,8 +3,8 @@ import logging
 import re
 from decimal import Decimal
 
-from src.analytics.llm import prompts as P
-from src.analytics.llm.agent import DEFAULT_HISTORY_PATH, Agent
+from analytics.llm import prompts as P
+from analytics.llm.agent import DEFAULT_HISTORY_PATH, Agent
 
 import sqlglot
 from sqlglot import exp

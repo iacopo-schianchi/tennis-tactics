@@ -1,4 +1,4 @@
-from src.analytics.registry import Query, register
+from analytics.registry import Query, register
 from modules.court.annotator import SINGLES_SIDELINE_INSET_M
 from utils.consts import COURT_WIDTH
 
