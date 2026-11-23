@@ -6,9 +6,11 @@ from src.analytics.llm.agent import DEFAULT_HISTORY_PATH
 from src.analytics.llm.db import PostgresRunner
 from src.analytics.llm.model import Model
 from src.analytics.llm.multi_agent import MultiAgent
+from pathlib import Path
 
 # registry queries whose insight is called with condensed=True
 CONDENSED_QUERIES = ['reply_direction_by_incoming_shot']
+SCRIPT_DIR = Path(__file__).resolve().parent
 
 
 def load_queries():
@@ -25,8 +27,8 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--player-id", required=True)
     parser.add_argument("--query", default=None, help="Question. Omit for an interactive session")
-    parser.add_argument("--report-file", default="./src/analytics/llm/synthesized_report.txt", help="Synthesized report text, stored as the synthesizer's context")
-    parser.add_argument("--schema-file", default="./src/analytics/llm/schema.sql")
+    parser.add_argument("--report-file", default=SCRIPT_DIR / "synthesized_report.txt", help="Synthesized report text, stored as the synthesizer's context")
+    parser.add_argument("--schema-file", default=SCRIPT_DIR / "schema.sql")
     parser.add_argument("--dsn", default=os.environ.get("SUPABASE_DB_URL"))
     parser.add_argument("--history", default=DEFAULT_HISTORY_PATH)
     parser.add_argument("--reset", action="store_true", help="Clear the chat history and report first")
